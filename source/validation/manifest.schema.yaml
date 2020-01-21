@@ -1,0 +1,68 @@
+type:      map
+mapping:
+  "region":
+    type:      str
+    required: True
+  "version":
+    type:      date
+    required: True
+    enum: [2019-12-01]
+  "organization_policies":
+    type: seq
+    sequence:
+    - type: map
+      required: True
+      mapping:
+        "name": &name
+        "description": &description
+        "policy_file":
+          type:  str
+          required: True
+        "apply_to_accounts_in_ou":
+          required: True
+          type:  seq
+          sequence:
+            - type: str
+  "cloudformation_resources":
+    type: seq
+    sequence:
+    - type: map
+      required: True
+      mapping:
+        "name": *name
+        "deploy_to_account":
+          type: seq
+          required: False
+          sequence:
+            - type: any
+        "deploy_to_ou":
+          type: seq
+          required: False
+          sequence:
+            - type: str
+        "template_file":
+           required: True
+           type: str
+        "parameter_file": &parameter_file
+        "deploy_method": &deploy_method
+        "depends_on":
+          type: seq
+          sequence:
+            - type: str
+        "regions": &regions
+          type: seq
+          sequence:
+              - type: str
+                unique: True
+        "ssm_parameters": &ssm_parameters
+          type: seq
+          sequence:
+            - type: map
+              required: True
+              mapping:
+                "name":
+                  type: str
+                  required: True
+                "value":
+                  type: str
+                  required: True

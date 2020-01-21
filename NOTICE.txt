@@ -1,0 +1,26 @@
+Customizations for AWS Control Tower Solution
+
+Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved. 
+Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except 
+in compliance with the License. A copy of the License is located at http://www.apache.org/licenses/LICENSE-2.0 
+or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, 
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for the 
+specific language governing permissions and limitations under the License. 
+
+**********************
+THIRD PARTY COMPONENTS
+**********************
+This software includes third party software subject to the following copyrights:
+
+AWS SDK under the Apache License Version 2.0 
+boto3 under the Apache License Version 2.0
+pip under the Massachusetts Institute of Technology (MIT) license 
+setuptools under the Massachusetts Institute of Technology (MIT) license 
+virtualenv under the Massachusetts Institute of Technology (MIT) license 
+PyYAML under the Massachusetts Institute of Technology (MIT) license 
+yorm under the Massachusetts Institute of Technology (MIT) license 
+jinja2 under the Berkeley Software Distribution (BSD) license 
+requests under the Apache Software License 
+pykwalify under the Massachusetts Institute of Technology (MIT) license 
+cfn_flip under the Apache License Version 2.0
+cfn-nag under the Massachusetts Institute of Technology (MIT) license
