@@ -9,9 +9,8 @@ To get started with the Customizations for AWS Control Tower solution, please re
 * Next, run unit tests to make sure added customization passes the tests 
 
 ``` 
-cd ./deployment 
-chmod +x ./run-unit-tests.sh
-./run-unit-tests.sh
+chmod +x ./deployment/run-unit-tests.sh
+./deployment/run-unit-tests.sh
 ``` 
 
 ## Building the customized solution
