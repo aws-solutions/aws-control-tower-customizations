@@ -13,7 +13,7 @@ log_level=$2
 wait_time=$3
 sm_arn=$4
 artifact_bucket=$5
-execution_mode=$6
+kms_key_alias_name=$6
 bool_values=$7
 none_type_values=$8
 build_stage_name='build'
@@ -38,14 +38,14 @@ build_scripts () {
 
 scp_scripts () {
     echo 'Date: `date` Path: `pwd`'
-    echo 'python trigger_scp_sm.py $log_level $wait_time $manifest_file_path $sm_arn_scp $artifact_bucket'
-    python trigger_scp_sm.py $log_level $wait_time $manifest_file_path $sm_arn $artifact_bucket
+    echo 'python state_machine_trigger.py $log_level $wait_time $manifest_file_path $sm_arn $artifact_bucket $scp_stage_name $kms_key_alias_name'
+    python state_machine_trigger.py $log_level $wait_time $manifest_file_path $sm_arn $artifact_bucket $scp_stage_name $kms_key_alias_name
 }
 
 stackset_scripts () {
     echo 'Date: `date` Path: `pwd`'
-    echo 'python trigger_stackset_sm.py $log_level $wait_time $manifest_file_path $sm_arn_scp $artifact_bucket $execution_mode'
-    python trigger_stackset_sm.py $log_level $wait_time $manifest_file_path $sm_arn $artifact_bucket $execution_mode
+    echo 'python state_machine_trigger.py $log_level $wait_time $manifest_file_path $sm_arn $artifact_bucket $stackset_stage_name $kms_key_alias_name'
+    python state_machine_trigger.py $log_level $wait_time $manifest_file_path $sm_arn $artifact_bucket $stackset_stage_name $kms_key_alias_name
 }
 
 if [ $stage_name_argument == $build_stage_name ];

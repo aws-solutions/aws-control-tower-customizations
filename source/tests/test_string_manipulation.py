@@ -12,17 +12,30 @@
 #  KIND, express or implied. See the License for the specific language       #
 #  governing permissions  and limitations under the License.                 #
 ##############################################################################
-from utils.logger import Logger
-from manifest.manifest_parser import StackSetParser
-
-log_level = 'info'
-logger = Logger(loglevel=log_level)
-
-ssp = StackSetParser(logger)
+from utils import string_manipulation
 
 
-def test_list_item_conversion():
-    list_of_numbers = [1234, 5678]
-    list_of_strings = ssp._convert_list_values_to_string(list_of_numbers)
-    for string in list_of_strings:
-        assert type(string) is str
+def test_sanitize():
+    non_sanitized_string = 'I s@nitize $tring exc*pt_underscore-hypen.'
+    sanitized_string_allow_space = 'I s_nitize _tring exc_pt_underscore-hypen.'
+    sanitized_string_no_space_replace_hypen = \
+        'I-s-nitize--tring-exc-pt_underscore-hypen.'
+    assert string_manipulation.sanitize(non_sanitized_string,True) == \
+           sanitized_string_allow_space
+    assert string_manipulation.sanitize(non_sanitized_string, False,'-') == \
+           sanitized_string_no_space_replace_hypen
+
+
+def test_trim_length():
+    actual_sting = "EighteenCharacters"
+    eight_char_string = "Eighteen"
+    assert string_manipulation.trim_length(actual_sting, 8) == eight_char_string
+    assert string_manipulation.trim_length(actual_sting, 18) == actual_sting
+    assert string_manipulation.trim_length(actual_sting, 20) == actual_sting
+
+
+def test_extract_string():
+    actual_string = "abcdefgh"
+    extract_string = "defgh"
+    assert string_manipulation.extract_string(actual_string, 'abc') == \
+           extract_string

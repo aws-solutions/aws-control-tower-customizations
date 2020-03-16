@@ -12,17 +12,13 @@
 #  KIND, express or implied. See the License for the specific language       #
 #  governing permissions  and limitations under the License.                 #
 ##############################################################################
-from utils.logger import Logger
-from manifest.manifest_parser import StackSetParser
-
-log_level = 'info'
-logger = Logger(loglevel=log_level)
-
-ssp = StackSetParser(logger)
+from utils import password_generator
+import re
 
 
-def test_list_item_conversion():
-    list_of_numbers = [1234, 5678]
-    list_of_strings = ssp._convert_list_values_to_string(list_of_numbers)
-    for string in list_of_strings:
-        assert type(string) is str
+def test_random_pwd_generator():
+    random_pwd_no_additional_string = \
+        password_generator.random_pwd_generator(10, 'a')
+    assert len(re.sub('([^0-9])','',random_pwd_no_additional_string)) >= 2
+    assert random_pwd_no_additional_string[8:] == "aa"
+    assert len(random_pwd_no_additional_string) == 10

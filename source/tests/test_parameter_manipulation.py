@@ -12,9 +12,35 @@
 #  or implied. See the License for the specific language governing permissions#
 #  and limitations under the License.                                         #
 ###############################################################################
+from utils import parameter_manipulation
 
-import logging
-log = logging.getLogger(__name__)
 
-# This is a custom valiator specifically for pyKwlify Schema extensions
-log.info("No custom validations available")
+param = {
+    "key": "value",
+    "key1": "value1"
+}
+trans_params = [
+    {
+        "ParameterKey": "key",
+        "ParameterValue": "value"
+    },
+    {
+        "ParameterKey": "key1",
+        "ParameterValue": "value1"
+    }
+]
+
+
+def test_transform_params():
+    out_params = parameter_manipulation.transform_params(param)
+    for idx in range(len(out_params)):
+        assert out_params[idx]['ParameterKey']\
+               == trans_params[idx]['ParameterKey']
+        assert out_params[idx]['ParameterValue']\
+               == trans_params[idx]['ParameterValue']
+
+
+def test_reverse_transform_params():
+    rev_param = parameter_manipulation.reverse_transform_params(trans_params)
+    for key in rev_param.keys():
+        assert rev_param[key] == param[key]

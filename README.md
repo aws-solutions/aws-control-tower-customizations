@@ -1,5 +1,5 @@
 ## Customizations for AWS Control Tower Solution
-The Customizations for AWS Control Tower solution combines AWS Control Tower and other highly-available, trusted AWS services to help customers more quickly set up a secure, multi-account AWS environment based on AWS best practices. Customers can easily add customizations to their AWS Control Tower landing zone using an AWS CloudFormation template and service control policies (SCPs). Customers can deploy their custom template and policies to both individual accounts and organizational units (OUs) within their organization. Customizations for AWS Control Tower integrates with AWS Control Tower lifecycle events to ensure that resource deployments stay in sync with the customer's landing zone. For example, when a new account is created using the AWS Control Tower account factory, the solution ensures that all resources attached to the account's OUs will be automatically deployed.
+The Customizations for AWS Control Tower solution combines AWS Control Tower and other highly-available, trusted AWS services to help customers more quickly set up a secure, multi-account AWS environment based on AWS best practices. Customers can easily add customizations to their AWS Control Tower landing zone using an AWS CloudFormation template and service control policies (SCPs). Customers can deploy their custom template and policies to both individual accounts and organizational units (OUs) within their organization. Customizations for AWS Control Tower integrates with AWS Control Tower lifecycle events to ensure that resource deployments stay in sync with the customer's landing zone. For example, when a new account is created using the AWS Control Tower account factory, the solution ensures that all resources attached to the account's OUs will be automatically deployed. Before deploying this solution, customers need to have an AWS Control Tower landing zone deployed in their account.
 
 ## Getting Started 
 To get started with the Customizations for AWS Control Tower solution, please review the solution documentation. https://aws.amazon.com/solutions/customizations-for-aws-control-tower
@@ -17,19 +17,21 @@ chmod +x ./run-unit-tests.sh
 ## Building the customized solution
 * Configure the solution name, version number and bucket name of your target Amazon S3 distribution bucket 
 ``` 
-export SOLUTION_NAME=customizations-for-aws-control-tower # name of the solution
-export DIST_OUTPUT_BUCKET=my-bucket-name # bucket where customized code will reside 
-export VERSION=my-version # version number for the customized code 
+export DIST_OUTPUT_BUCKET=my-source-code-bucket-name # Name for the S3 bucket where customized code will reside 
+export TEMPLATE_OUTPUT_BUCKET=my-template-bucket-name # Name for the S3 bucket where the template will be located
+export SOLUTION_NAME=customizations-for-aws-control-tower # name of the solution 
+export VERSION=my-version # version number for the customized code  
 ``` 
 _Note:_ You would have to create an S3 bucket with prefix 'my-bucket-name-<aws_region>'; aws_region is where you are testing the customized solution. Also, the assets in bucket should be publicly accessible 
  
 * Now build the distributable: 
 ``` 
 chmod +x ./build-s3-dist.sh
-./build-s3-dist.sh $DIST_OUTPUT_BUCKET $SOLUTION_NAME $VERSION
+./build-s3-dist.sh $DIST_OUTPUT_BUCKET $TEMPLATE_OUTPUT_BUCKET $SOLUTION_NAME $VERSION
 ``` 
  
 * Deploy the distributable to an Amazon S3 bucket in your account. _Note:_ you must have the AWS Command Line Interface installed. 
+Make sure you use proper acl and profile for the copy operation as applicable.
 ``` 
 aws s3 cp deployment/global-s3-assets/  s3://my-bucket-name-<aws_region>/$SOLUTION_NAME/$VERSION/ --recursive --acl bucket-owner-full-control --profile aws-cred-profile-name 
 aws s3 cp deployment/regional-s3-assets/ s3://my-bucket-name-<aws_region>/$SOLUTION_NAME/$VERSION/ --recursive --acl bucket-owner-full-control --profile aws-cred-profile-name
@@ -59,7 +61,7 @@ customizations-for-aws-control-tower
     └── validation                                  [ shell and python scripts for validating manifest schema and cfn template]
 ```
 
-Below shows the file structure of a custom configuration package. Note that this is an example, therefore file path, folder and file names can be modified by customers to match what is defined in the manifest file.
+Below shows the file structure of a custom configuration package which can be found in the github source code. Note that this is an example, therefore file path, folder and file names can be modified by customers to match what is defined in the manifest file.
 
 ```
 custom_control_tower_configuration
@@ -75,7 +77,7 @@ custom_control_tower_configuration
 ```   
 ***
 
-Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with the License. A copy of the License is located at
 
 http://www.apache.org/licenses/LICENSE-2.0  

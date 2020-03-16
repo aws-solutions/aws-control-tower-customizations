@@ -12,9 +12,27 @@
 #  or implied. See the License for the specific language governing permissions#
 #  and limitations under the License.                                         #
 ###############################################################################
+from utils import os_util
+import mock
+from utils.logger import Logger
+import os
 
-import logging
-log = logging.getLogger(__name__)
 
-# This is a custom valiator specifically for pyKwlify Schema extensions
-log.info("No custom validations available")
+log_level = 'info'
+logger = Logger(loglevel=log_level)
+
+
+@mock.patch('utils.os_util.os')
+def test_make_dir(self, tmpdir):
+    os_util.make_dir(tmpdir)
+    assert os.path.isdir(tmpdir) is True
+    os_util.make_dir(tmpdir, logger)
+    assert os.path.isdir(tmpdir) is True
+
+
+@mock.patch('utils.os_util.os')
+def test_remove_dir(self, tmpdir):
+    os_util.remove_dir(tmpdir)
+    assert os.path.isdir(tmpdir) is False
+    os_util.remove_dir(tmpdir, logger)
+    assert os.path.isdir(tmpdir) is False

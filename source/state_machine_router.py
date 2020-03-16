@@ -1,25 +1,28 @@
-######################################################################################################################
-#  Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           #
-#                                                                                                                    #
-#  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance        #
-#  with the License. A copy of the License is located at                                                             #
-#                                                                                                                    #
-#      http://www.apache.org/licenses/LICENSE-2.0                                                                                    #
-#                                                                                                                    #
-#  or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES #
-#  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    #
-#  and limitations under the License.                                                                                #
-######################################################################################################################
+##############################################################################
+#  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.   #
+#                                                                            #
+#  Licensed under the Apache License, Version 2.0 (the "License").           #
+#  You may not use this file except in compliance                            #
+#  with the License. A copy of the License is located at                     #
+#                                                                            #
+#      http://www.apache.org/licenses/LICENSE-2.0                            #
+#                                                                            #
+#  or in the "license" file accompanying this file. This file is             #
+#  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY  #
+#  KIND, express or implied. See the License for the specific language       #
+#  governing permissions  and limitations under the License.                 #
+##############################################################################
 
 # !/bin/python
 
-from state_machine_handler import CloudFormation, GeneralFunctions, ServiceControlPolicy
-from lib.logger import Logger
 import os
 import inspect
+from state_machine_handler import CloudFormation, StackSetSMRequests,  \
+ ServiceControlPolicy
+from utils.logger import Logger
 
 # initialise logger
-log_level = os.environ['log_level']
+log_level = os.environ['LOG_LEVEL']
 logger = Logger(loglevel=log_level)
 
 
@@ -47,7 +50,7 @@ def cloudformation(event, function_name):
     elif function_name == 'delete_stack_instances':
         response = stack_set.delete_stack_instances()
     else:
-        message = "Function name does not match any function in the handler file."
+        message = build_messages(1)
         logger.info(message)
         return {"Message": message}
 
@@ -82,7 +85,8 @@ def service_control_policy(event, function_name):
         step = event.get('Step')
         count = event.get('Count')
         policy_list = event.get('ResourceProperties').get('PolicyList', [])
-        policy_to_apply = policy_list[index] if len(policy_list) > index else None
+        policy_to_apply = policy_list[index]  \
+            if len(policy_list) > index else None
 
         if index < count:
             _continue = True
@@ -134,7 +138,7 @@ def service_control_policy(event, function_name):
         return event
 
     else:
-        message = "Function name does not match any function in the handler file."
+        message = build_messages(1)
         logger.info(message)
         return {"Message": message}
 
@@ -142,31 +146,44 @@ def service_control_policy(event, function_name):
     return response
 
 
-def general_functions(event, function_name):
-    gf = GeneralFunctions(event, logger)
+def stackset_sm_requests(event, function_name):
+    sr = StackSetSMRequests(event, logger)
     logger.info("Router FunctionName: {}".format(function_name))
 
     if function_name == 'ssm_put_parameters':
-        response = gf.ssm_put_parameters()
+        response = sr.ssm_put_parameters()
     elif function_name == 'export_cfn_output':
-        response = gf.export_cfn_output()
-    elif function_name == 'send_success_to_cfn':
-        response = gf.send_success_to_cfn()
-    elif function_name == 'send_failure_to_cfn':
-        response = gf.send_failure_to_cfn()
-    elif function_name == 'account_initialization_check':
-        response = gf.account_initialization_check()
+        response = sr.export_cfn_output()
     elif function_name == 'send_execution_data':
-        response = gf.send_execution_data()
+        response = sr.send_execution_data()
     elif function_name == 'random_wait':
-        response = gf.random_wait()
+        response = sr.random_wait()
     else:
-        message = "Function name does not match any function in the handler file."
+        message = build_messages(1)
         logger.info(message)
         return {"Message": message}
 
     logger.info(response)
     return response
+
+
+def build_messages(type):
+    """build different logger messages based on type
+    Args:
+        type: int. determines what message to build
+
+    Return:
+        message
+    """
+    if type == 1:
+        message = "Function name does not match any function" \
+                    " in the handler file."
+    elif type == 2:
+        message = "Class name does not match any class"  \
+                    " in the handler file."
+    else:
+        message = "Class name not found in input."
+    return message
 
 
 def lambda_handler(event, context):
@@ -181,19 +198,19 @@ def lambda_handler(event, context):
         if class_name is not None:
             if class_name == "CloudFormation":
                 return cloudformation(event, function_name)
-            elif class_name == 'GeneralFunctions':
-                return general_functions(event, function_name)
+            elif class_name == 'StackSetSMRequests':
+                return stackset_sm_requests(event, function_name)
             elif class_name == 'SCP':
                 return service_control_policy(event, function_name)
             else:
-                message = "Class name does not match any class in the handler file."
+                message = build_messages(2)
                 logger.info(message)
                 return {"Message": message}
         else:
-            message = "Class name not found in input."
+            message = build_messages(3)
             logger.info(message)
             return {"Message": message}
     except Exception as e:
-        message = {'FILE': __file__.split('/')[-1], 'METHOD': inspect.stack()[0][3], 'EXCEPTION': str(e)}
-        logger.exception(message)
+        logger.log_general_exception(
+            __file__.split('/')[-1], inspect.stack()[0][3], e)
         raise

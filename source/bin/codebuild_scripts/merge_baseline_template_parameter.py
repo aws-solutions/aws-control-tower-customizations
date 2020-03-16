@@ -1,21 +1,24 @@
-# Copyright 2012-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License").
-# You may not use this file except in compliance with the License.
-# A copy of the License is located at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# or in the "license" file accompanying this file. This file is distributed
-# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
-# express or implied. See the License for the specific language governing
-# permissions and limitations under the License.
+###############################################################################
+#  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.    #
+#                                                                             #
+#  Licensed under the Apache License, Version 2.0 (the "License").            #
+#  You may not use this file except in compliance with the License.
+#  A copy of the License is located at                                        #
+#                                                                             #
+#      http://www.apache.org/licenses/LICENSE-2.0                             #
+#                                                                             #
+#  or in the "license" file accompanying this file. This file is distributed  #
+#  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express #
+#  or implied. See the License for the specific language governing permissions#
+#  and limitations under the License.                                         #
+###############################################################################
 
-from lib.logger import Logger
 import json
 import sys
 import os
 import subprocess
+from utils.logger import Logger
+
 
 def _read_file(file):
     if os.path.isfile(file):
@@ -49,7 +52,8 @@ def _flip_to_yaml(json_file):
     subprocess.run(["cfn-flip", "-y", json_file, yaml_file])
 
 
-def file_matcher(master_data, add_on_data, master_key='master', add_on_key='add_on'):
+def file_matcher(master_data, add_on_data, master_key='master',
+                 add_on_key='add_on'):
     for item in master_data.get(master_key):
         logger.info("Iterating Master AVM File List")
         for key, value in item.items():
@@ -63,7 +67,8 @@ def file_matcher(master_data, add_on_data, master_key='master', add_on_key='add_
                     add_on_file_name = v.split('/')[-1]
                     logger.info("add_on_value: {}".format(v.split('/')[-1]))
                     if master_file_name == add_on_file_name:
-                        logger.info("Matching file names found - full path below")
+                        logger.info("Matching file names found - "
+                                    "full path below")
                         logger.info("File in master list: {}".format(value))
                         logger.info("File in add-on list: {}".format(v))
                         # Pass value and v to merge functions
@@ -71,9 +76,11 @@ def file_matcher(master_data, add_on_data, master_key='master', add_on_key='add_
                             logger.info("Processing template file")
                             # merge master avm template with add_on template
                             # send json data
-                            final_json = update_template(_flip_to_json(value), _flip_to_json(v))
+                            final_json = update_template(_flip_to_json(value),
+                                                         _flip_to_json(v))
                             # write the json data to json file
-                            updated_json_file_name = os.path.join(value+updated_flag)
+                            updated_json_file_name =  \
+                                os.path.join(value+updated_flag)
                             _write_file(final_json, updated_json_file_name)
                             _flip_to_yaml(updated_json_file_name)
                         if master_file_name.lower().endswith('.json'):
@@ -86,7 +93,8 @@ def update_level_1_dict(master, add_on, level_1_key):
         if isinstance(value1, dict):
             # Check if primary key matches
             if key1 == level_1_key:
-                logger.info("Level 1 keys matched ADDON {} == {}".format(key1, level_1_key))
+                logger.info("Level 1 keys matched ADDON {} == {}".format(
+                    key1, level_1_key))
                 # Iterate through the 2nd level dicts in the value
                 for key2, value2 in value1.items():
                     logger.info("----------------------------------")
@@ -94,20 +102,25 @@ def update_level_1_dict(master, add_on, level_1_key):
                     for k1, v1 in master.items():
                         if isinstance(v1, dict):
                             if k1 == level_1_key:
-                                logger.info("Level 1 keys matched MASTER {} == {}".format(k1, level_1_key))
+                                logger.info("Level 1 keys matched MASTER "
+                                            "{} == {}".format(k1, level_1_key))
                                 flag = False
-                                # Iterate through the 2nd level dicts in the value
+                                # Iterate through the 2nd level dicts in
+                                # the value
                                 for k2, v2 in v1.items():
                                     logger.info("Is {} == {}".format(key2, k2))
                                     if key2 == k2:
                                         logger.info("Found matching keys")
                                         flag = False
-                                        logger.info("Setting flag value to {}".format(flag))
+                                        logger.info("Setting flag value to {}"
+                                                    .format(flag))
                                         break
                                     else:
                                         flag = True
-                                        logger.info("Add-on key not found in existing dict, setting flag "
-                                                    "value to {} to update dict.".format(flag))
+                                        logger.info(
+                                            "Add-on key not found in existing"
+                                            " dict, setting flag value to {}"
+                                            " to update dict.".format(flag))
                                 if flag:
                                     logger.info('Adding key {}'.format(key2))
                                     d2 = {key2: value2}
@@ -128,6 +141,7 @@ def _keys(json_data):
     for k, v in json_data.items():
         keys.append(k)
     return keys
+
 
 def update_template(master, add_on):
     logger.info("Merging template files.")
@@ -152,9 +166,11 @@ def update_parameters(master, add_on, decision_key='ParameterKey'):
                 for i in m_list:
                     logger.info(i.get(decision_key))
                     if item.get(decision_key) == i.get(decision_key):
-                        logger.info("Keys: '{}' matched, skipping".format(item.get(decision_key)))
+                        logger.info("Keys: '{}' matched, skipping"
+                                    .format(item.get(decision_key)))
                         flag = False
-                        logger.info("Setting flag value to {} and stopping the loop.".format(flag))
+                        logger.info("Setting flag value to {} and stopping"
+                                    " the loop.".format(flag))
                         break
                     else:
                         flag = True
@@ -183,6 +199,8 @@ if __name__ == '__main__':
         file_matcher(master_list, add_on_list)
 
     else:
-        print('No arguments provided. Please provide the existing and new manifest files names.')
-        print('Example: merge_baseline_template_parameter.py <LOG-LEVEL> <MASTER_FILE_NAME> <ADD_ON_FILE_NAME>')
+        print('No arguments provided. Please provide the existing and '
+              'new manifest files names.')
+        print('Example: merge_baseline_template_parameter.py <LOG-LEVEL>'
+              ' <MASTER_FILE_NAME> <ADD_ON_FILE_NAME>')
         sys.exit(2)

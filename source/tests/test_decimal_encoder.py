@@ -12,17 +12,24 @@
 #  KIND, express or implied. See the License for the specific language       #
 #  governing permissions  and limitations under the License.                 #
 ##############################################################################
-from utils.logger import Logger
-from manifest.manifest_parser import StackSetParser
-
-log_level = 'info'
-logger = Logger(loglevel=log_level)
-
-ssp = StackSetParser(logger)
+from utils.decimal_encoder import DecimalEncoder
+import json
+import decimal
 
 
-def test_list_item_conversion():
-    list_of_numbers = [1234, 5678]
-    list_of_strings = ssp._convert_list_values_to_string(list_of_numbers)
-    for string in list_of_strings:
-        assert type(string) is str
+def test_decimal_encoder():
+    assert json.dumps(
+        {'x': decimal.Decimal('5.5')}, cls=DecimalEncoder) == json.dumps(
+        {'x': 5.5})
+    assert json.dumps(
+        {'x': decimal.Decimal('5.0')}, cls=DecimalEncoder) == json.dumps(
+        {'x': 5})
+    encoder = DecimalEncoder()
+    assert encoder.encode({'x': decimal.Decimal('5.65')}) == json.dumps(
+        {'x': 5.65})
+    assert encoder.encode({'x': decimal.Decimal('5.0')}) == json.dumps(
+        {'x': 5})
+    assert encoder.encode(
+        {'x': decimal.Decimal('5.0'),
+         'y': decimal.Decimal('5.5')}) == json.dumps({'x': 5, 'y': 5.5})
+

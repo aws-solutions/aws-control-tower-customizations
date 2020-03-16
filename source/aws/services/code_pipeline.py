@@ -12,17 +12,29 @@
 #  KIND, express or implied. See the License for the specific language       #
 #  governing permissions  and limitations under the License.                 #
 ##############################################################################
-from utils.logger import Logger
-from manifest.manifest_parser import StackSetParser
 
-log_level = 'info'
-logger = Logger(loglevel=log_level)
-
-ssp = StackSetParser(logger)
+# !/bin/python
+import inspect
+from botocore.exceptions import ClientError
+from aws.utils.boto3_session import Boto3Session
 
 
-def test_list_item_conversion():
-    list_of_numbers = [1234, 5678]
-    list_of_strings = ssp._convert_list_values_to_string(list_of_numbers)
-    for string in list_of_strings:
-        assert type(string) is str
+class CodePipeline(Boto3Session):
+    """This class make code pipeline API calls such as starts code pipeline
+       execution, etc.
+    """
+    def __init__(self, logger, **kwargs):
+        self.logger = logger
+        __service_name = 'codepipeline'
+        super().__init__(logger, __service_name, **kwargs)
+        self.code_pipeline = super().get_client()
+
+    def start_pipeline_execution(self, code_pipeline_name):
+        try:
+            response = self.code_pipeline.start_pipeline_execution(
+                name=code_pipeline_name
+            )
+            return response
+        except ClientError as e:
+            self.logger.log_unhandled_exception(e)
+            raise

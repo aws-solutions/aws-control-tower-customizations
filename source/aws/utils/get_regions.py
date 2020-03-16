@@ -13,8 +13,19 @@
 #  and limitations under the License.                                         #
 ###############################################################################
 
-import logging
-log = logging.getLogger(__name__)
+import boto3
 
-# This is a custom valiator specifically for pyKwlify Schema extensions
-log.info("No custom validations available")
+
+def get_available_regions(service_name):
+    """ Returns list of available regions given an AWS service.
+
+    Args: service_name
+
+    Return: list of available regions for the given AWS service
+            Example: ['ap-northeast-1', 'ap-northeast-2', 'ap-south-1',
+            'ap-southeast-1', 'ap-southeast-2','ca-central-1', 'eu-central-1',
+            'eu-west-1', 'eu-west-2', 'eu-west-3', 'sa-east-1', 'us-east-1',
+            'us-east-2', 'us-west-1', 'us-west-2']
+    """
+    session = boto3.session.Session()
+    return session.get_available_regions(service_name)

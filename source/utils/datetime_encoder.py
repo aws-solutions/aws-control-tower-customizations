@@ -12,17 +12,15 @@
 #  KIND, express or implied. See the License for the specific language       #
 #  governing permissions  and limitations under the License.                 #
 ##############################################################################
-from utils.logger import Logger
-from manifest.manifest_parser import StackSetParser
 
-log_level = 'info'
-logger = Logger(loglevel=log_level)
-
-ssp = StackSetParser(logger)
+# !/bin/python
+import json
+from datetime import datetime, date
 
 
-def test_list_item_conversion():
-    list_of_numbers = [1234, 5678]
-    list_of_strings = ssp._convert_list_values_to_string(list_of_numbers)
-    for string in list_of_strings:
-        assert type(string) is str
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, (datetime, date)):
+            serial = o.isoformat()
+            return serial
+        raise TypeError("Type %s not serializable" % type(o))

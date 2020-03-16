@@ -8,9 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial public release
 
-### Known Issues
-- Single Value Change Issue: In case there is only a single value in the account list or region list in the 
-StackSet state machine input, the replacement of the old single value with a new single
-value does not successfully delete the stack instance in the old account or region. 
-This issue is not applicable if there is more than one value in either account or region
-list.
+## [1.1.0] - 2020-02-25
+### Known Issue Fix and Code Optimization
+- Stack Instance Deletion Issue: In case there are existing stack instances but
+none of those instances belongs to the accounts specified in the user manifest
+file as the input for the StackSet state machine, the deletion of the existing
+stack instances would fail. This issue is not applicable if at least one account
+in the input account list has an exsiting stack instance.
+- Code Optimization for Best Practice
