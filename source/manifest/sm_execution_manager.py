@@ -153,7 +153,7 @@ class SMExecutionManager:
                 if operation_status_flag:
                     self.logger.info("Continuing...")
                 else:
-                    return operation_status_flag
+                    return operation_status_flag, False
 
                 # Compare template copy - START
                 self.logger.info("Comparing the template of the StackSet:"
@@ -173,7 +173,7 @@ class SMExecutionManager:
                     self.logger.error("TemplateURL in state machine input "
                                       "is empty. Check state_machine_event"
                                       ":{}".format(sm_input))
-                    return False
+                    return False, False
 
                 cfn_template_file = tempfile.mkstemp()[1]
                 with open(cfn_template_file, "w") as f:
