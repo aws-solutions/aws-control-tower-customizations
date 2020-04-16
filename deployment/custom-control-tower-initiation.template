@@ -27,6 +27,24 @@ Parameters:
     Description: (Not required if Pipeline Approval Stage = 'No') Email for notifying that the CustomControlTower pipeline is waiting for an Approval
     Type: String
 
+  CodeCommitConfigurationSource:
+    Description: Use AWS CodeCommit as the configuration source?
+    AllowedValues:
+      - 'Yes'
+      - 'No'
+    Default: 'No'
+    Type: String
+
+  CodeCommitRepositoryName:
+    Description: (Not required if CodeCommit Configuration Source = 'No') Name of CodeCommit repository that will contain custom Control Tower configuration
+    Default: custom-control-tower-configuration
+    Type: String
+
+  CodeCommitBranchName:
+    Description: (Not required if CodeCommit Configuration Source = 'No') Name of branch in CodeCommit repository that will contain custom Control Tower configuration
+    Default: master
+    Type: String
+
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -35,12 +53,24 @@ Metadata:
       Parameters:
       - PipelineApprovalStage
       - PipelineApprovalEmail
+      - CodeCommitConfigurationSource
+    - Label:
+        default: CodeCommit Configuration (Used only if CodeCommitConfigurationSource = 'Yes')
+      Parameters:
+      - CodeCommitRepositoryName
+      - CodeCommitBranchName
 
     ParameterLabels:
       PipelineApprovalStage:
         default: Pipeline Approval Stage
       PipelineApprovalEmail:
         default: Pipeline Approval Email Address
+      CodeCommitConfigurationSource:
+        default: CodeCommit Configuration Source
+      CodeCommitRepositoryName:
+        default: CodeCommit Repository Name
+      CodeCommitBranchName:
+        default: CodeCommit Branch Name
 
 Mappings:
   BucketConfiguration:
@@ -83,6 +113,7 @@ Mappings:
 Conditions:
   IsPipelineApprovalStageCondition: !Equals [!Ref PipelineApprovalStage, 'Yes']
   IsBuildCustomControlTowerCondition: !Equals [!FindInMap [AutoBuild, CustomControlTower, Flag], 'Yes']
+  IsCodeCommitConfigurationSource: !Equals [!Ref CodeCommitConfigurationSource, 'Yes']
 
 Resources:
 
@@ -191,6 +222,13 @@ Resources:
             Action: s3:DeleteBucket
             Resource: !Sub "arn:aws:s3:::${CustomControlTowerS3AccessLogsBucket}"
 
+  CustomControlTowerCodeCommit:
+    Type: AWS::CodeCommit::Repository
+    Condition: IsCodeCommitConfigurationSource
+    Properties:
+      RepositoryDescription: Configuration for Customizations for AWS Control Tower solution
+      RepositoryName: !Ref CodeCommitRepositoryName
+
   CustomControlTowerCodePipelineRole:
     Type: AWS::IAM::Role
     Metadata:
@@ -281,15 +319,25 @@ Resources:
           Actions:
             - Name: Source
               ActionTypeId:
-                Category: Source
-                Owner: AWS
-                Version: "1"
-                Provider: S3
+                !If
+                  - IsCodeCommitConfigurationSource
+                  - Category: Source
+                    Owner: AWS
+                    Version: "1"
+                    Provider: CodeCommit
+                  - Category: Source
+                    Owner: AWS
+                    Version: "1"
+                    Provider: S3
               OutputArtifacts:
                 - Name: SourceApp
               Configuration:
-                S3Bucket: !Ref CustomControlTowerPipelineS3Bucket
-                S3ObjectKey: !FindInMap [BucketConfiguration, CustomControlTowerPipelineS3TriggerKey, Name]
+                !If
+                  - IsCodeCommitConfigurationSource
+                  - RepositoryName: !GetAtt CustomControlTowerCodeCommit.Name
+                    BranchName: !Ref CodeCommitBranchName
+                  - S3Bucket: !Ref CustomControlTowerPipelineS3Bucket
+                    S3ObjectKey: !FindInMap [BucketConfiguration, CustomControlTowerPipelineS3TriggerKey, Name]
               RunOrder: 1
         - Name: Build
           Actions:
@@ -2644,6 +2692,54 @@ Resources:
       Enabled: true
       EventSourceArn: !GetAtt CustomControlTowerLEFIFOQueue.Arn
       FunctionName: !Ref CustomControlTowerLELambda
+
+  CustomControlTowerPipelineTriggerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "events.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+
+  CustomControlTowerCodeCommitPipelineTriggerCWEventRule:
+    Type: AWS::Events::Rule
+    Condition: IsCodeCommitConfigurationSource
+    Properties:
+      Description: Custom Control Tower - Rule for triggering CodePipeline from CodeCommit
+      EventPattern:
+        {
+          "source": [
+            "aws.codecommit"
+          ],
+          "detail-type": [
+            "CodeCommit Repository State Change"
+          ],
+          "resources": [
+            !Sub "arn:${AWS::Partition}:codecommit:${AWS::Region}:${AWS::AccountId}:${CodeCommitRepositoryName}"
+          ],
+          "detail": {
+            "event": [
+              "referenceCreated",
+              "referenceUpdated"
+            ],
+            "referenceType": [
+              "branch"
+            ],
+            "referenceName": [
+              !Ref CodeCommitBranchName
+            ]
+          }
+        }
+      State: ENABLED
+      Targets:
+        - Arn: !Sub "arn:${AWS::Partition}:codepipeline:${AWS::Region}:${AWS::AccountId}:${CustomControlTowerCodePipeline}"
+          Id: "CustomControlTower_Pipeline_Trigger"
+          RoleArn: !GetAtt CustomControlTowerPipelineTriggerRole.Arn
 
   # Cloudwatch Event Rule for Lifecycle Event (LE): triggered by LE events and send events to SQS
   CustomControlTowerLECWEventRule:
