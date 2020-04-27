@@ -152,6 +152,10 @@ class StackSetParser:
         ou_ids_manifest = []
         # convert OU Name to OU IDs
         for ou_name in resource.deploy_to_ou:
+
+            if ou_name == 'Root':
+                accounts_in_ou.extend(accounts_in_all_ous)
+
             ou_id = [value for key, value in ou_name_to_id_map.items()
                      if ou_name == key]
             ou_ids_manifest.extend(ou_id)
