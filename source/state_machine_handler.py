@@ -892,7 +892,11 @@ class ServiceControlPolicy(object):
         self.logger.info("Looking up the OU Id for OUName: {} with nested"
                          " ou delimiter: {}".format(nested_ou_name,
                                                     delimiter))
-        return self._get_ou_id(org, root_id, nested_ou_name, delimiter)
+        if nested_ou_name == 'Root':
+            self.logger.info("We want to apply this SCP to the Root level")
+            return root_id
+        else:
+            return self._get_ou_id(org, root_id, nested_ou_name, delimiter)
 
     def _get_ou_id(self, org, parent_id, nested_ou_name, delimiter):
         nested_ou_name_list = self._empty_separator_handler(
