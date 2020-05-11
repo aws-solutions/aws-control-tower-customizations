@@ -634,7 +634,12 @@ Resources:
                   - ec2:CreateKeyPair
                 Resource:
                   - '*'
-
+              - Effect: Allow
+                Action:
+                  - cloudformation:DescribeStackSet
+                  - cloudformation:ListStackSetOperations
+                  - cloudformation:ListStackInstances
+                Resource: '*'
   StackSetCodeBuild:
       Type: AWS::CodeBuild::Project
       DependsOn: CustomControlTowerDeploymentLambda
