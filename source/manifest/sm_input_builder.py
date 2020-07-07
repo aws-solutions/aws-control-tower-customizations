@@ -45,7 +45,7 @@ class SCPResourceProperties:
     """
     def __init__(self, policy_name, policy_description, policy_url, ou_list,
                  policy_list=None, account_id='', operation='',
-                 ou_name_delimiter=''):
+                 ou_name_delimiter=':'):
         self._policy_name = policy_name
         self._policy_description = policy_description
         self._policy_url = policy_url
