@@ -130,11 +130,11 @@ class StackSetParser:
                     resource, sanitized_account_list)
                 state_machine_inputs.append(sm_input)
             else:
-                raise Exception("Unsupported deploy_method: {} found for "
-                                "resource {} and Account: {} in Manifest"
-                                .format(resource.deploy_method,
-                                        resource.name,
-                                        sanitized_account_list))
+                raise ValueError("Unsupported deploy_method: {} found for "
+                                 "resource {} and Account: {} in Manifest"
+                                 .format(resource.deploy_method,
+                                         resource.name,
+                                         sanitized_account_list))
             self.logger.info("<<<<<<<<< FINISH : {} <<<<<<<<<"
                              .format(resource.name))
 
@@ -369,9 +369,7 @@ class StackSetParser:
 
     def _load_params(self, relative_parameter_path, account=None, region=None):
         if relative_parameter_path.lower().startswith('s3'):
-            parameter_file = self.s3.download_remote_file(
-                relative_parameter_path
-            )
+            parameter_file = self.s3.get_s3_object(relative_parameter_path)
         else:
             parameter_file = os.path.join(self.manifest_folder,
                                           relative_parameter_path)

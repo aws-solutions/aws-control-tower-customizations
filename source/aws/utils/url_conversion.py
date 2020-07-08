@@ -14,13 +14,14 @@
 ###############################################################################
 
 from urllib.parse import urlparse
+from os import environ
 
 
 def convert_s3_url_to_http_url(s3_url):
     """Convert s3 url to http url.
 
     Converts the S3 URL s3://bucket-name/object
-    to HTTP URL https://s3.amazonaws.com/bucket-name/object.
+    to HTTP URL https://bucket-name.s3.Region.amazonaws.com/key-name
 
     Args:
         s3_url
@@ -33,27 +34,49 @@ def convert_s3_url_to_http_url(s3_url):
     u = urlparse(s3_url)
     s3bucket = u.netloc
     s3key = u.path[1:]
-    http_url = "https://s3.amazonaws.com/{}/{}".format(s3bucket, s3key)
+    http_url = build_http_url(s3bucket, s3key)
     return http_url
 
 
-def convert_http_url_to_s3_url(http_url):
+def build_http_url(bucket_name, key_name):
+    """ Builds http url for the given bucket and key name
+
+    :param bucket_name:
+    :param key_name:
+    :return HTTP URL:
+     example: https://bucket-name.s3.Region.amazonaws.com/key-name
+    """
+    return "{}{}{}{}{}{}".format('https://',
+                                 bucket_name,
+                                 '.s3.',
+                                 environ.get('AWS_REGION'),
+                                 '.amazonaws.com/',
+                                 key_name)
+
+
+def parse_bucket_key_names(http_url):
     """Convert http url to s3 url.
 
-    Convert the HTTP URL https://s3.amazonaws.com/bucket-name/object
-    to S3 URL s3://bucket-name/object.
-
+    Convert the HTTP URL https://bucket-name.s3.Region.amazonaws.com/key-name or
+    https://s3.Region.amazonaws.com/bucket-name/key-name
+    to S3 URL s3://bucket-name/key-name.
     Args:
         http_url
 
     Returns:
-        s3 url
-
-    Raises:
+        s3_url
     """
-    u = urlparse(http_url)
-    t = u.path.split('/', 2)
-    s3bucket = t[1]
-    s3key = t[2]
-    s3_url = "s3://{}/{}".format(s3bucket, s3key)
-    return s3_url
+    # Handle Amazon S3 path-style URL
+    # Needed to handle response from describe_provisioning_artifact API - response['Info']['TemplateUrl']
+    # example: https://s3.Region.amazonaws.com/bucket-name/key-name
+    if http_url.startswith('https://s3.'):
+        parsed_url = urlparse(http_url)
+        bucket_name = parsed_url.path.split('/', 2)[1]
+        key_name = parsed_url.path.split('/', 2)[2]
+    # Handle Amazon S3 virtual-hosted–style URL
+    # example: https://bucket-name.s3.Region.amazonaws.com/key-name
+    else:
+        parsed_url = urlparse(http_url)
+        bucket_name = parsed_url.netloc.split('.')[0]
+        key_name = parsed_url.path[1:]
+    return bucket_name, key_name

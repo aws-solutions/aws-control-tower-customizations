@@ -115,13 +115,3 @@ class Organizations(Boto3Session):
             self.logger.log_unhandled_exception(e)
             raise
 
-    @try_except_retry(count=4, multiplier=2)
-    def describe_account(self, acct_id):
-        try:
-            response = self.org_client.describe_account(
-                AccountId=acct_id
-            )
-            return response
-        except ClientError as e:
-            self.logger.log_unhandled_exception(e)
-            raise

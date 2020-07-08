@@ -17,6 +17,7 @@
 import inspect
 import json
 import time
+import tempfile
 from random import randint
 import requests
 from botocore.exceptions import ClientError
@@ -27,7 +28,7 @@ from aws.services.sts import AssumeRole
 from aws.services.ssm import SSM
 from aws.services.s3 import S3
 from metrics.solution_metrics import SolutionMetrics
-from aws.utils.url_conversion import convert_http_url_to_s3_url
+from aws.utils.url_conversion import parse_bucket_key_names
 
 
 class CloudFormation(object):
@@ -731,8 +732,10 @@ class ServiceControlPolicy(object):
         self.logger.info(event)
         self.s3 = S3(logger)
 
-    def _load_policy(self, relative_policy_path):
-        policy_file = self.s3.download_remote_file(relative_policy_path)
+    def _load_policy(self, http_policy_path):
+        bucket_name, key_name = parse_bucket_key_names(http_policy_path)
+        policy_file = tempfile.mkstemp()[1]
+        self.s3.download_file(bucket_name, key_name, policy_file)
 
         self.logger.info("Parsing the policy file: {}".format(policy_file))
 
@@ -785,9 +788,7 @@ class ServiceControlPolicy(object):
 
         scp = SCP(self.logger)
         self.logger.info("Creating Service Control Policy")
-        policy_s3_url = convert_http_url_to_s3_url(
-            policy_doc.get('PolicyURL'))
-        policy_content = self._load_policy(policy_s3_url)
+        policy_content = self._load_policy(policy_doc.get('PolicyURL'))
 
         response = scp.create_policy(policy_doc.get('Name'),
                                      policy_doc.get('Description'),
@@ -804,9 +805,7 @@ class ServiceControlPolicy(object):
         self.logger.info(self.params)
         policy_doc = self.params.get('PolicyDocument')
         policy_id = self.event.get('PolicyId')
-        policy_s3_url = convert_http_url_to_s3_url(
-            policy_doc.get('PolicyURL'))
-        policy_content = self._load_policy(policy_s3_url)
+        policy_content = self._load_policy(policy_doc.get('PolicyURL'))
 
         scp = SCP(self.logger)
         self.logger.info("Updating Service Control Policy")
@@ -932,7 +931,7 @@ class ServiceControlPolicy(object):
         policy_name = self.params.get('PolicyDocument').get('Name')
         ou_id = self.get_ou_id(ou_name, delimiter)
         if ou_id is None or len(ou_id) == 0:
-            raise Exception("OU id is not found for {}".format(ou_name))
+            raise ValueError("OU id is not found for {}".format(ou_name))
         self.event.update({'OUId': ou_id})
         self.list_policies_for_target(ou_id, policy_name)
 
@@ -1047,14 +1046,9 @@ class StackSetSMRequests(object):
 
         # instantiate STS class
         _assume_role = AssumeRole()
-        role_arn = "arn:aws:iam::" + str(account) +  \
-                   ":role/AWSControlTowerExecution"
-        session_name = "custom-control-tower-role"
         cfn = Stacks(self.logger,
                      region,
-                     credentials=_assume_role(self.logger, account,
-                                              role_arn, session_name))
-
+                     credentials=_assume_role(self.logger, account))
         response = cfn.describe_stacks(stack_name)
         stacks = response.get('Stacks')
 
@@ -1081,10 +1075,10 @@ class StackSetSMRequests(object):
         if stack_id:
             stack_name = stack_id.split('/')[1]
         else:
-            raise Exception("Describe Stack Instance failed to retrieve"
-                            " the StackId for StackSet: {} "
-                            "in account: {} and region: {}"
-                            .format(stack_set_name, account, region))
+            raise ValueError("Describe Stack Instance failed to retrieve"
+                             " the StackId for StackSet: {} in account: "
+                             "{} and region: {}"
+                             .format(stack_set_name, account, region))
         self.logger.info("stack_name={}".format(stack_name))
         return stack_id, stack_name
 
@@ -1161,7 +1155,7 @@ class StackSetSMRequests(object):
         if ssm_value == 'NotFound':
             # Raise Exception if the key is not found in
             # the State Machine output.
-            raise Exception("Unable to find the key: {} in the"
+            raise KeyError("Unable to find the key: {} in the"
                             " State Machine Output".format(value))
         else:
             self.logger.info("Adding value for SSM Parameter Store"

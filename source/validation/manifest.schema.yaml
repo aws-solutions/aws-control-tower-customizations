@@ -6,7 +6,7 @@ mapping:
   "version":
     type:      date
     required: True
-    enum: [2019-12-01]
+    enum: [2020-01-01]
   "organization_policies":
     type: seq
     sequence:

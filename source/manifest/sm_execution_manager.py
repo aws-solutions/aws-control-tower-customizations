@@ -6,10 +6,11 @@ from uuid import uuid4
 from aws.services.s3 import S3
 from aws.services.state_machine import StateMachine
 from aws.services.cloudformation import StackSet
-from utils.string_manipulation import trim_length
-from aws.utils.url_conversion import convert_http_url_to_s3_url
+from utils.string_manipulation import trim_length_from_end
+from aws.utils.url_conversion import parse_bucket_key_names
 from utils.parameter_manipulation import transform_params, \
     reverse_transform_params
+from utils.list_comparision import compare_lists
 from metrics.solution_metrics import SolutionMetrics
 from manifest.cfn_params_handler import CFNParamsHandler
 
@@ -19,6 +20,7 @@ class SMExecutionManager:
         self.logger = logger
         self.sm_input_list = sm_input_list
         self.list_sm_exec_arns = []
+        self.stack_set_exist = True
         self.s3 = S3(logger)
         self.solution_metrics = SolutionMetrics(logger)
         self.param_handler = CFNParamsHandler(logger)
@@ -37,8 +39,8 @@ class SMExecutionManager:
             self.logger.info(" > > > > >  Running Sequential Mode. > > > > >")
             return self.run_execution_sequential_mode()
         else:
-            raise Exception("Invalid execution mode: {}"
-                            .format(self.execution_mode))
+            raise ValueError("Invalid execution mode: {}"
+                             .format(self.execution_mode))
 
     def run_execution_sequential_mode(self):
         status, failed_execution_list = None, []
@@ -48,32 +50,40 @@ class SMExecutionManager:
             stack_set_name = sm_input.get('ResourceProperties')\
                 .get('StackSetName', '')
 
-            self.logger.info("stack_set_name: {}".format(stack_set_name))
-            self.logger.info("sm_input: {}".format(sm_input))
-
             template_matched, parameters_matched = \
                 self.compare_template_and_params(sm_input, stack_set_name)
 
-            self.logger.info("FLAGS: {} |  {}".format(template_matched,
-                                                      parameters_matched))
-            if template_matched and parameters_matched:
-                if self.check_stack_instances_per_account(sm_input,
-                                                          stack_set_name):
-                    continue
+            self.logger.info("Stack Set Name: {} | "
+                             "Same Template?: {} | "
+                             "Same Parameters?: {}"
+                             .format(stack_set_name,
+                                     template_matched,
+                                     parameters_matched))
 
-            sm_exec_name = self.get_sm_exec_name(updated_sm_input)
-
-            sm_exec_arn = self.setup_execution(updated_sm_input,
-                                               sm_exec_name)
-            self.list_sm_exec_arns.append(sm_exec_arn)
-
-            status, failed_execution_list = \
-                self.monitor_state_machines_execution_status()
-            if status == 'FAILED':
-                return status, failed_execution_list
+            if template_matched and parameters_matched and self.stack_set_exist:
+                start_execution_flag = self.compare_stack_instances(
+                    sm_input,
+                    stack_set_name
+                )
             else:
-                self.logger.info("State Machine execution completed. "
-                                 "Starting next execution...")
+                # the template or parameters needs to be updated
+                # start SM execution
+                start_execution_flag = True
+
+            if start_execution_flag:
+                sm_exec_name = self.get_sm_exec_name(updated_sm_input)
+
+                sm_exec_arn = self.setup_execution(updated_sm_input,
+                                                   sm_exec_name)
+                self.list_sm_exec_arns.append(sm_exec_arn)
+
+                status, failed_execution_list = \
+                    self.monitor_state_machines_execution_status()
+                if status == 'FAILED':
+                    return status, failed_execution_list
+                else:
+                    self.logger.info("State Machine execution completed. "
+                                     "Starting next execution...")
         else:
             self.logger.info("All State Machine executions completed.")
         return status, failed_execution_list
@@ -98,14 +108,15 @@ class SMExecutionManager:
         elif os.environ.get('STAGE_NAME').upper() == 'STACKSET':
             return sm_input.get('ResourceProperties').get('StackSetName')
         else:
-            return uuid4()  # return random string
+            return str(uuid4())  # return random string
 
     def setup_execution(self, sm_input, name):
         self.logger.info("State machine Input: {}".format(sm_input))
 
         # set execution name
         exec_name = "%s-%s-%s" % (sm_input.get('RequestType'),
-                                  trim_length(name.replace(" ", ""), 50),
+                                  trim_length_from_end(name.replace(" ", ""),
+                                                       50),
                                   time.strftime("%Y-%m-%dT%H-%M-%S"))
 
         # execute all SM at regular interval of wait_time
@@ -136,14 +147,14 @@ class SMExecutionManager:
         return sm_input
 
     def compare_template_and_params(self, sm_input, stack_name):
+
+        self.logger.info("Comparing the templates and parameters.")
         template_compare, params_compare = False, False
         if stack_name:
             describe_response = self.stack_set\
                 .describe_stack_set(stack_name)
-
-            self.logger.info("describe_stack_set response:")
-            self.logger.info(describe_response)
-
+            self.logger.info("Print Describe Stack Set Response: {}"
+                             .format(describe_response))
             if describe_response is not None:
                 self.logger.info("Found existing stack set.")
 
@@ -153,7 +164,7 @@ class SMExecutionManager:
                 if operation_status_flag:
                     self.logger.info("Continuing...")
                 else:
-                    return operation_status_flag
+                    return operation_status_flag, operation_status_flag
 
                 # Compare template copy - START
                 self.logger.info("Comparing the template of the StackSet:"
@@ -163,17 +174,17 @@ class SMExecutionManager:
                 template_http_url = sm_input.get('ResourceProperties')\
                     .get('TemplateURL', '')
                 if template_http_url:
-                    template_s3_url = convert_http_url_to_s3_url(
+                    bucket_name, key_name = parse_bucket_key_names(
                         template_http_url
                     )
-                    local_template_file = self.s3.download_remote_file(
-                        template_s3_url
-                    )
+                    local_template_file = tempfile.mkstemp()[1]
+                    self.s3.download_file(bucket_name, key_name,
+                                          local_template_file)
                 else:
                     self.logger.error("TemplateURL in state machine input "
                                       "is empty. Check state_machine_event"
                                       ":{}".format(sm_input))
-                    return False
+                    return False, False
 
                 cfn_template_file = tempfile.mkstemp()[1]
                 with open(cfn_template_file, "w") as f:
@@ -206,6 +217,12 @@ class SMExecutionManager:
 
                 self.logger.info("template_compare={}; params_compare={}"
                                  .format(template_compare, params_compare))
+            else:
+                self.logger.info('Stack Set does not exist. '
+                                 'Creating a new stack set ....')
+                template_compare, params_compare = True, True
+                # set this flag to create the stack set
+                self.stack_set_exist = False
 
         return template_compare, params_compare
 
@@ -229,73 +246,55 @@ class SMExecutionManager:
                                          " Update StackSet for {}"
                                          .format(stack_name))
                         return False
-                return True
+        return True
 
-    def check_stack_instances_per_account(self, sm_input, stack_name):
-        flag = False
-        account_list = sm_input.get('ResourceProperties') \
+    def compare_stack_instances(self, sm_input: dict, stack_name: str) -> bool:
+        """
+            Compares deployed stack instances with expected accounts
+            & regions for a given StackSet
+        :param sm_input: state machine input
+        :param stack_name: stack set name
+        :return: boolean
+        # True: if the SM execution needs to make CRUD operations
+         on the StackSet
+        # False: if no changes to stack instances are required
+        """
+        self.logger.info("Comparing deployed stack instances with "
+                         "expected accounts & regions for "
+                         "StackSet: {}".format(stack_name))
+        expected_account_list = sm_input.get('ResourceProperties')\
             .get("AccountList", [])
-        if account_list:
-            self.logger.info("Comparing the Stack Instances "
-                             "Account & Regions for "
-                             "StackSet: {}".format(stack_name))
-            expected_region_list = set(sm_input
-                                       .get('ResourceProperties')
-                                       .get("RegionList", []))
+        expected_region_list = sm_input.get('ResourceProperties')\
+            .get("RegionList", [])
 
-            # iterator over accounts in event account list
-            for account in account_list:
-                actual_region_list = set()
+        actual_account_list, actual_region_list = \
+            self.stack_set.get_accounts_and_regions_per_stack_set(stack_name)
 
-                self.logger.info("### Listing the Stack "
-                                 "Instances for StackSet: {}"
-                                 " and Account: {} ###"
-                                 .format(stack_name, account))
-                stack_instance_list = self.stack_set. \
-                    list_stack_instances_per_account(stack_name,
-                                                     account)
+        self.logger.info("*** Stack instances expected to be deployed "
+                         "in following accounts. ***")
+        self.logger.info(expected_account_list)
+        self.logger.info("*** Stack instances actually deployed "
+                         "in following accounts. ***")
+        self.logger.info(actual_account_list)
+        self.logger.info("*** Stack instances expected to be deployed "
+                         "in following regions. ***")
+        self.logger.info(expected_region_list)
+        self.logger.info("*** Stack instances actually deployed "
+                         "in following regions. ***")
+        self.logger.info(actual_region_list)
 
-                self.logger.info(stack_instance_list)
-
-                if stack_instance_list:
-                    for instance in stack_instance_list:
-                        if instance.get('Status') \
-                                .upper() == 'CURRENT':
-                            actual_region_list \
-                                .add(instance.get('Region'))
-                        else:
-                            self.logger.info("Found at least one of"
-                                             " the Stack Instances"
-                                             " in {} state."
-                                             " Triggering Update"
-                                             " StackSet for {}"
-                                             .format(instance
-                                                     .get('Status'),
-                                                     stack_name))
-                            return False
-                else:
-                    self.logger.info("Found no stack instances in"
-                                     " account: {},Updating "
-                                     "StackSet: {}"
-                                     .format(account, stack_name))
-                    return False
-
-                if expected_region_list. \
-                        issubset(actual_region_list):
-                    self.logger.info("Found expected regions : {} "
-                                     "in deployed stack instances :"
-                                     " {}, so skipping Update  "
-                                     "StackSet for {}"
-                                     .format(expected_region_list,
-                                             actual_region_list,
-                                             stack_name))
-                    flag = True
+        self.logger.info("*** Comparing account lists ***")
+        accounts_matched = compare_lists(actual_account_list,
+                                         expected_account_list)
+        self.logger.info("*** Comparing region lists ***")
+        regions_matched = compare_lists(actual_region_list,
+                                        expected_region_list,)
+        if accounts_matched and regions_matched:
+            self.logger.info("No need to add or remove stack instances.")
+            return False
         else:
-            self.logger.info("Found no changes in template "
-                             "& parameters, so skipping Update  "
-                             "StackSet for {}".format(stack_name))
-            flag = True
-        return flag
+            self.logger.info("Stack instance(s) creation or deletion needed.")
+            return True
 
     def monitor_state_machines_execution_status(self):
         if self.list_sm_exec_arns:

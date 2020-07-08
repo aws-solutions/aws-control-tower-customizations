@@ -25,11 +25,10 @@ ssm = SSM(logger)
 
 
 def test_update_alfred_ssm():
-    keyword_ssm = 'not_exist_alfred_ssm'
-    key_ssm = 'key_ssm'
-    value_ssm = 'not_exist_alfred_ssm'
+    keyword_ssm = 'alfred_ssm_not_exist_alfred_ssm'
+    value_ssm = 'parameter_store_value'
     value_ssm, param_flag = cph._update_alfred_ssm(
-                            keyword_ssm, key_ssm, value_ssm, False)
+                            keyword_ssm, value_ssm, False)
     assert param_flag is True
 
 

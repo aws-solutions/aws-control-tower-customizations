@@ -19,7 +19,8 @@ from os import environ
 from aws.services.ssm import SSM
 from aws.services.ec2 import EC2
 from aws.services.kms import KMS
-from utils.string_manipulation import sanitize, extract_string
+from aws.services.sts import AssumeRole
+from utils.string_manipulation import sanitize, trim_string_from_front
 from utils.password_generator import random_pwd_generator
 
 
@@ -34,10 +35,19 @@ class CFNParamsHandler(object):
         self.logger = logger
         self.ssm = SSM(self.logger)
         self.kms = KMS(self.logger)
+        self.assume_role = AssumeRole()
 
-    def _session(self, region, account_id):
-        # instantiate EC2 sessions
-        return EC2(self.logger, region)
+    def _session(self, region, account_id=None):
+        # instantiate EC2 session
+        account_id = account_id[0] if \
+            isinstance(account_id, list) else account_id
+        if account_id is None:
+            return EC2(self.logger, region)
+        else:
+            return EC2(self.logger,
+                       region,
+                       credentials=self.assume_role(self.logger,
+                                                    account_id))
 
     def _get_ssm_params(self, ssm_parm_name):
         return self.ssm.get_parameter(ssm_parm_name)
@@ -71,9 +81,13 @@ class CFNParamsHandler(object):
                                  ' existing AZ list.')
                 return self.ssm.get_parameter(key_az)
         if account is not None:
-            ec2 = self._session(region, account)
+            # fetch account from list for cross account assume role workflow
+            # the account id is arbitrary in this case as we need to get the
+            # AZ list for a given region in any account.
+            acct = account[0] if isinstance(account, list) else account
+            ec2 = self._session(region, acct)
             self.logger.info("Getting list of AZs in region: {} from"
-                             " account: {}".format(region, account))
+                             " account: {}".format(region, acct))
             return self._get_az(ec2, key_az, qty)
         else:
             self.logger.info("Creating EC2 Session in {} region"
@@ -219,9 +233,9 @@ class CFNParamsHandler(object):
                     # alfred_genaz_, alfred_getaz_, alfred_genuuid, etc.
                     if keyword.startswith('alfred_ssm_'):
                         value, param_flag = self._update_alfred_ssm(
-                            keyword, key, value, substitute_ssm_values)
+                            keyword, value, substitute_ssm_values)
                         if param_flag is False:
-                            raise Exception("Missing SSM parameter name for:"
+                            raise KeyError("Missing SSM parameter name for:"
                                             " {} in the parameters JSON file."
                                             .format(key))
                     elif keyword.startswith('alfred_genkeypair'):
@@ -241,20 +255,19 @@ class CFNParamsHandler(object):
         self.logger.info("params out : {}".format(params_out))
         return params_out
 
-    def _update_alfred_ssm(self, keyword, key, value, substitute_ssm_values):
+    def _update_alfred_ssm(self, keyword, value, substitute_ssm_values):
         """Gets the value of the SSM parameter whose name starts with
            'alfred_ssm_ '
         Args:
             keyword: string. trimmed parameter value without
                      unwanted leading and trailing characters
-            key: parameter key
             value: parameter value
             substitute_ssm_values: boolean. default to true
 
         Return:
             value of the SSM parameter
         """
-        ssm_param_name = extract_string(keyword, 'alfred_ssm_')
+        ssm_param_name = trim_string_from_front(keyword, 'alfred_ssm_')
         param_flag = True
 
         if ssm_param_name:
@@ -310,7 +323,7 @@ class CFNParamsHandler(object):
         Return:
             generated random password
         """
-        sub_string = extract_string(keyword, 'alfred_genpass_')
+        sub_string = trim_string_from_front(keyword, 'alfred_genpass_')
         if sub_string:
             pw_length = int(sub_string)
         else:
@@ -340,7 +353,7 @@ class CFNParamsHandler(object):
         Return:
             list of random az's
         """
-        sub_string = extract_string(keyword, 'alfred_genaz_')
+        sub_string = trim_string_from_front(keyword, 'alfred_genaz_')
         if sub_string:
             no_of_az = int(sub_string)
         else:

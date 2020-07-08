@@ -50,7 +50,7 @@ def unzip_function(zip_file_name, function_path, output_path):
 
 def find_replace(function_path, file_name, destination_file, parameters):
     j2loader = FileSystemLoader(function_path)
-    j2env = Environment(loader=j2loader, autoescape=True)  # Compliant
+    j2env = Environment(loader=j2loader)  # Compliant
     j2template = j2env.get_template(file_name)
     dictionary = {}
     for key, value in parameters.items():

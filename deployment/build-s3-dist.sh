@@ -20,26 +20,30 @@
 # Check to see if input has been provided:                                                                       
 if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]; then
     echo "Please provide the base source bucket name, template-bucket, trademark approved solution name, and version"
-    echo "For example: ./build-s3-dist.sh solutions template-bucket trademarked-solution-name v1.0.0" 
+    echo "For example: ./build-s3-dist.sh solutions template-bucket trademarked-solution-name v1.0.0"
     exit 1
 fi
 
-# Get reference for all important folders
+# declare variables
 template_dir="$PWD"
 template_dist_dir="$template_dir/deployment/global-s3-assets"
 build_dist_dir="$template_dir/deployment/regional-s3-assets"
+CODE_BUCKET_NAME=$1
+TEMPLATE_BUCKET_NAME=$2
+SOLUTION_NAME=$3
+VERSION_NUMBER=$4
 
  echo "------------------------------------------------------------------------------"
  echo "[Init] Clean old dist and recreate directories"
  echo "------------------------------------------------------------------------------"
  echo "rm -rf $template_dist_dir"
- rm -rf $template_dist_dir
+ rm -rf "$template_dist_dir"
  echo "mkdir -p $template_dist_dir"
- mkdir -p $template_dist_dir
+ mkdir -p "$template_dist_dir"
  echo "rm -rf $build_dist_dir"
- rm -rf $build_dist_dir
+ rm -rf "$build_dist_dir"
  echo "mkdir -p $build_dist_dir"
- mkdir -p $build_dist_dir
+ mkdir -p "$build_dist_dir"
 
 # Create zip file for AWS Lambda functions
 echo -e "\n Creating all lambda functions for Custom Control Tower Solution"
@@ -47,87 +51,65 @@ python source/bin/build_scripts/lambda_build.py state_machine_lambda deployment_
 #python source/bin/build_scripts/lambda_build.py state_machine_lambda deployment_lambda build_scripts lifecycle_event_handler
 
 echo -e "\n Cleaning up the tests folder from the lambda zip files"
-zip -d $build_dist_dir/custom-control-tower-config-deployer.zip tests/*
-zip -d $build_dist_dir/custom-control-tower-state-machine.zip tests/*
-zip -d $build_dist_dir/custom-control-tower-scripts.zip tests/*
-zip -d $build_dist_dir/custom-control-tower-lifecycle-event-handler.zip tests/*
-zip -d $build_dist_dir/custom-control-tower-state-machine-trigger.zip tests/*
+zip -d "$build_dist_dir"/custom-control-tower-config-deployer.zip tests/*
+zip -d "$build_dist_dir"/custom-control-tower-state-machine.zip tests/*
+zip -d "$build_dist_dir"/custom-control-tower-scripts.zip tests/*
+zip -d "$build_dist_dir"/custom-control-tower-lifecycle-event-handler.zip tests/*
+zip -d "$build_dist_dir"/custom-control-tower-state-machine-trigger.zip tests/*
 
 # Move custom-control-tower-initiation.template to global-s3-assets
 echo "cp -f deployment/custom-control-tower-initiation.template $template_dist_dir"
-cp -f deployment/custom-control-tower-initiation.template $template_dist_dir
+cp -f deployment/custom-control-tower-initiation.template "$template_dist_dir"
 
 #COPY deployment/add-on to $build_dist_dir/add-on
-mkdir $template_dist_dir/add-on/
-cp -f -R deployment/add-on/. $template_dist_dir/add-on
+mkdir "$template_dist_dir"/add-on/
+cp -f -R deployment/add-on/. "$template_dist_dir"/add-on
 
 #COPY custom_control_tower_configuration to global-s3-assets
 #Please check to see if this is the correct location or template_dist_dir
-cp -f -R deployment/custom_control_tower_configuration $build_dist_dir/custom_control_tower_configuration/
+cp -f -R deployment/custom_control_tower_configuration "$build_dist_dir"/custom_control_tower_configuration/
 
-echo -e "\n Updating code source bucket in the template with $1"
-replace="s/%DIST_BUCKET_NAME%/$1/g"
+echo -e "\n Updating code source bucket in the template with $CODE_BUCKET_NAME"
+replace="s/%DIST_BUCKET_NAME%/$CODE_BUCKET_NAME/g"
 echo "sed -i -e $replace $template_dist_dir/custom-control-tower-initiation.template"
-sed -i -e $replace $template_dist_dir/custom-control-tower-initiation.template
+sed -i -e "$replace" "$template_dist_dir"/custom-control-tower-initiation.template
 
-cd $template_dist_dir/add-on
-for y in `find . -name "*.template"`;
-  do
-    echo "sed -i -e $replace $y"
-    sed -i -e $replace $y
-  done
-cd ../../..
-
-echo -e "\n Updating template bucket in the template with $2"
-replace="s/%TEMPLATE_BUCKET_NAME%/$2/g"
+echo -e "\n Updating template bucket in the template with $TEMPLATE_BUCKET_NAME"
+replace="s/%TEMPLATE_BUCKET_NAME%/$TEMPLATE_BUCKET_NAME/g"
 echo "sed -i -e $replace $template_dist_dir/custom-control-tower-initiation.template"
-sed -i -e $replace $template_dist_dir/custom-control-tower-initiation.template
-echo "sed -i -e $replace $build_dist_dir/$rss_file_name"
-sed -i -e $replace $build_dist_dir/$rss_file_name
-
-cd $template_dist_dir/add-on
-for y in `find . -name "*.template"`;
-  do
-    echo "sed -i -e $replace $y"
-    sed -i -e $replace $y
-  done
-cd ../../..
+sed -i -e "$replace" "$template_dist_dir"/custom-control-tower-initiation.template
 
 # Replace solution name with real value
-echo -e "\n >> Updating solution name in the template with $3"
-replace="s/%SOLUTION_NAME%/$3/g"
+echo -e "\n Updating solution name in the template with $SOLUTION_NAME"
+replace="s/%SOLUTION_NAME%/$SOLUTION_NAME/g"
 echo "sed -i -e $replace $template_dist_dir/custom-control-tower-initiation.template"
-sed -i -e $replace $template_dist_dir/custom-control-tower-initiation.template
+sed -i -e "$replace" "$template_dist_dir"/custom-control-tower-initiation.template
 
-cd $template_dist_dir/add-on
-for y in `find . -name "*.template"`;
-  do
-    echo "sed -i -e $replace $y"
-    sed -i -e $replace $y
-  done
-cd ../../..
-
-echo -e "\n Updating version number in the template with $4"
-replace="s/%VERSION%/$4/g"
+echo -e "\n Updating version number in the template with $VERSION_NUMBER"
+replace="s/%VERSION%/$VERSION_NUMBER/g"
 echo "sed -i -e $replace $template_dist_dir/custom-control-tower-initiation.template"
-sed -i -e $replace $template_dist_dir/custom-control-tower-initiation.template
-
-echo "sed -i -e $replace $template_dist_dir/$rss_file_name"
-sed -i -e $replace $template_dist_dir/$rss_file_name
-
-cd $template_dist_dir/add-on
-for y in `find . -name "*.template"`;
-  do
-    echo "sed -i -e $replace $y"
-    sed -i -e $replace $y
-  done
-cd ../../..
+sed -i -e "$replace" "$template_dist_dir"/custom-control-tower-initiation.template
 
 # Create configuration zip file
 echo -e "\n Creating zip file with Custom Control Tower configuration"
-cd $build_dist_dir/custom_control_tower_configuration/;  zip -Xr $build_dist_dir/custom-control-tower-configuration.zip ./* ; cd -
+cd "$build_dist_dir"/custom_control_tower_configuration/
+zip -Xr "$build_dist_dir"/custom-control-tower-configuration.zip ./*
 
+# build regional config zip file
+echo -e "\n*** Build regional config zip file"
+declare -a region_list=( "ap-northeast-2" "ap-southeast-2" "ca-central-1" "eu-west-1" "eu-west-2" "me-south-1" "us-east-1" "us-west-1" "ap-east-1" "ap-south-1" "eu-central-1" "eu-north-1" "eu-west-3" "sa-east-1" "us-east-2" "us-west-2" "ap-northeast-1" "ap-southeast-1" )
+for region in "${region_list[@]}"
+do
+  echo -e "\n Building config zip for $region region"
+  echo -e " Updating region name in the manifest to: $region \n"
+  replace="s/{{ region }}/$region/g"
+  cp ./manifest.yaml.j2 ./manifest.yaml
+  echo "sed -i -e $replace ./manifest.yaml"
+  sed -i -e "$replace" ./manifest.yaml
+  echo -e "\n Zipping configuration..."
+  zip -Xr "$build_dist_dir"/custom-control-tower-configuration-"$region".zip ./manifest.yaml ./example-configuration/*
+done
+cd -
 #Copy Lambda Zip Files to the Global S3 Assets
 echo -e "\n Copying lambda zip files to Global S3 Assets"
-cp $build_dist_dir/*.zip $template_dist_dir/
-
+cp "$build_dist_dir"/*.zip "$template_dist_dir"/

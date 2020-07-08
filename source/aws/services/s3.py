@@ -58,11 +58,26 @@ class S3(Boto3Session):
             self.logger.log_unhandled_exception(e)
             raise
 
-    def download_file(self, bucket_name, remote_file_location,
-                      local_file_location):
+    def download_file(self, bucket_name, key_name, local_file_location):
+        """ This function downloads the file from the S3 bucket for a given
+        S3 path in the method attribute.
+
+        Use Cases:
+        - download the S3 object on a given local file path
+
+        :param bucket_name:
+        :param key_name:
+        :param local_file_location:
+        :return None:
+        """
         try:
-            self.s3_resource.Bucket(bucket_name).download_file(
-                remote_file_location, local_file_location)
+            self.logger.info(
+                "Downloading {}/{} from S3 to {}".format(bucket_name,
+                                                         key_name,
+                                                         local_file_location))
+            self.s3_resource\
+                .Bucket(bucket_name).download_file(key_name,
+                                                   local_file_location)
         except ClientError as e:
             self.logger.log_unhandled_exception(e)
             raise
@@ -90,14 +105,21 @@ class S3(Boto3Session):
     def list_buckets(self):
         self.logger.info(self.s3_client.list_buckets())
 
-    def download_remote_file(self, remote_s3_path):
+    def get_s3_object(self, remote_s3_url):
+        """ This function downloads the file from the S3 bucket for a given
+        S3 path in the method attribute.
+
+        :param remote_s3_url: s3://bucket-name/key-name
+        :return: remote S3 file
+
+        Use Cases:
+        - manifest file contains template and parameter file as s3://bucket-name/key in SM trigger lambda
+        """
         try:
             _file = tempfile.mkstemp()[1]
-            t = remote_s3_path.split("/", 3)  # s3://bucket-name/key
-            remote_bucket = t[2]  # Bucket name
-            remote_key = t[3]  # Key
-            self.logger.info("Downloading {}/{} from S3 to {}".format(
-                remote_bucket, remote_key, _file))
+            parsed_s3_path = remote_s3_url.split("/", 3)  # s3://bucket-name/key
+            remote_bucket = parsed_s3_path[2]  # Bucket name
+            remote_key = parsed_s3_path[3]  # Key
             self.s3_client.download_file(remote_bucket, remote_key, _file)
             return _file
         except ClientError as e:

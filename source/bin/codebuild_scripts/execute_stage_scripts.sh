@@ -8,55 +8,61 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-stage_name_argument=$1
-log_level=$2
-wait_time=$3
-sm_arn=$4
-artifact_bucket=$5
-kms_key_alias_name=$6
-bool_values=$7
-none_type_values=$8
-build_stage_name='build'
-scp_stage_name='scp'
-stackset_stage_name='stackset'
-current=`pwd`
-export current
-manifest_file_path=$current/manifest.yaml
-
+STAGE_NAME_ARGUMENT=$1
+LOG_LEVEL=$2
+WAIT_TIME=$3
+SM_ARN=$4
+ARTIFACT_BUCKET=$5
+KMS_KEY_ALIAS_NAME=$6
+BOOL_VALUES=$7
+NONE_TYPE_VALUES=$8
+BUILD_STAGE_NAME="build"
+SCP_STAGE_NAME="scp"
+STACKSET_STAGE_NAME="stackset"
+CURRENT=$(pwd)
+MANIFEST_FILE_PATH=$CURRENT/manifest.yaml
 
 build_scripts () {
-    echo 'Date: `date` Path: `pwd`'
-    echo 'bash merge_directories.sh $none_type_values $bool_values'
-    bash merge_directories.sh $none_type_values $bool_values
-    echo 'Executing validation tests'
-    echo 'bash $current/validation/run-validation.sh $artifact_bucket'
-    bash $current/validation/run-validation.sh $artifact_bucket
-    echo 'Installing validation tests completed `date`'
-    echo 'Printing Merge Report'
+    echo "Date: $(date) Path: $(pwd)"
+    echo "bash merge_directories.sh $NONE_TYPE_VALUES $BOOL_VALUES"
+    bash merge_directories.sh "$NONE_TYPE_VALUES" "$BOOL_VALUES"
+    echo "Executing validation tests"
+    echo "bash validation/run-validation.sh $ARTIFACT_BUCKET"
+    bash validation/run-validation.sh "$ARTIFACT_BUCKET"
+    if [ $? == 0 ]
+    then
+      echo "Exit code: $? returned from the validation script."
+      echo "INFO: Validation test(s) completed."
+    else
+      echo "Exit code: $? returned from the validation script."
+      echo "ERROR: One or more validation test(s) failed."
+      exit 1
+    fi
+    echo "Printing Merge Report"
     cat merge_report.txt
 }
 
 scp_scripts () {
-    echo 'Date: `date` Path: `pwd`'
-    echo 'python state_machine_trigger.py $log_level $wait_time $manifest_file_path $sm_arn $artifact_bucket $scp_stage_name $kms_key_alias_name'
-    python state_machine_trigger.py $log_level $wait_time $manifest_file_path $sm_arn $artifact_bucket $scp_stage_name $kms_key_alias_name
+    echo "Date: $(date) Path: $(pwd)"
+    echo "python state_machine_trigger.py $LOG_LEVEL $WAIT_TIME $MANIFEST_FILE_PATH $SM_ARN $ARTIFACT_BUCKET $SCP_STAGE_NAME $KMS_KEY_ALIAS_NAME"
+    python state_machine_trigger.py "$LOG_LEVEL" "$WAIT_TIME" "$MANIFEST_FILE_PATH" "$SM_ARN" "$ARTIFACT_BUCKET" "$SCP_STAGE_NAME" "$KMS_KEY_ALIAS_NAME"
 }
 
 stackset_scripts () {
-    echo 'Date: `date` Path: `pwd`'
-    echo 'python state_machine_trigger.py $log_level $wait_time $manifest_file_path $sm_arn $artifact_bucket $stackset_stage_name $kms_key_alias_name'
-    python state_machine_trigger.py $log_level $wait_time $manifest_file_path $sm_arn $artifact_bucket $stackset_stage_name $kms_key_alias_name
+    echo "Date: $(date) Path: $(pwd)"
+    echo "python state_machine_trigger.py $LOG_LEVEL $WAIT_TIME $MANIFEST_FILE_PATH $SM_ARN $ARTIFACT_BUCKET $STACKSET_STAGE_NAME $KMS_KEY_ALIAS_NAME"
+    python state_machine_trigger.py "$LOG_LEVEL" "$WAIT_TIME" "$MANIFEST_FILE_PATH" "$SM_ARN" "$ARTIFACT_BUCKET" "$STACKSET_STAGE_NAME" "$KMS_KEY_ALIAS_NAME"
 }
 
-if [ $stage_name_argument == $build_stage_name ];
+if [ "$STAGE_NAME_ARGUMENT" == $BUILD_STAGE_NAME ];
 then
     echo "Executing Build Stage Scripts."
     build_scripts
-elif [ $stage_name_argument == $scp_stage_name ];
+elif [ "$STAGE_NAME_ARGUMENT" == $SCP_STAGE_NAME ];
 then
     echo "Executing SCP Stage Scripts."
     scp_scripts
-elif [ $stage_name_argument == $stackset_stage_name ];
+elif [ "$STAGE_NAME_ARGUMENT" == $STACKSET_STAGE_NAME ];
 then
     echo "Executing StackSet Stage Scripts."
     stackset_scripts
