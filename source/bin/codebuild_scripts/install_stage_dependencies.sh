@@ -26,6 +26,7 @@ install_common_pip_packages () {
     pip install --upgrade jinja2
     pip install --upgrade boto3
     pip install --upgrade requests
+    pip install --upgrade awscli
 }
 
 build_dependencies () {
