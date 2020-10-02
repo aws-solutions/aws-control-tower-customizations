@@ -25,6 +25,7 @@ install_common_pip_packages () {
     pip install --upgrade yorm
     pip install --upgrade jinja2
     pip install --upgrade boto3
+    pip install --upgrade awscli
     pip install --upgrade requests
 }
 
