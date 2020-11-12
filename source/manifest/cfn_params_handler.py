@@ -26,11 +26,12 @@ from utils.password_generator import random_pwd_generator
 
 class CFNParamsHandler(object):
     """This class goes through the cfn parameters passed by users to
-       state machines and SSM parameters to get the correct parameter
-       , create parameter value and update SSM parameters as applicable.
-       For example, if a cfn parameter is passed, save it in
-       SSM parameter store.
+    state machines and SSM parameters to get the correct parameter
+    , create parameter value and update SSM parameters as applicable.
+    For example, if a cfn parameter is passed, save it in
+    SSM parameter store.
     """
+
     def __init__(self, logger):
         self.logger = logger
         self.ssm = SSM(self.logger)
@@ -39,24 +40,24 @@ class CFNParamsHandler(object):
 
     def _session(self, region, account_id=None):
         # instantiate EC2 session
-        account_id = account_id[0] if \
-            isinstance(account_id, list) else account_id
+        account_id = account_id[0] if isinstance(account_id, list) else account_id
         if account_id is None:
             return EC2(self.logger, region)
         else:
-            return EC2(self.logger,
-                       region,
-                       credentials=self.assume_role(self.logger,
-                                                    account_id))
+            return EC2(
+                self.logger,
+                region,
+                credentials=self.assume_role(self.logger, account_id),
+            )
 
     def _get_ssm_params(self, ssm_parm_name):
         return self.ssm.get_parameter(ssm_parm_name)
 
     def _get_kms_key_id(self):
-        alias_name = environ.get('KMS_KEY_ALIAS_NAME')
+        alias_name = environ.get("KMS_KEY_ALIAS_NAME")
         response = self.kms.describe_key(alias_name)
         self.logger.debug(response)
-        key_id = response.get('KeyMetadata', {}).get('KeyId')
+        key_id = response.get("KeyMetadata", {}).get("KeyId")
         return key_id
 
     def get_azs_from_member_account(self, region, qty, account, key_az=None):
@@ -72,13 +73,13 @@ class CFNParamsHandler(object):
             list: availability zone names
         """
         if key_az:
-            self.logger.info("Looking up values in SSM parameter:{}"
-                             .format(key_az))
+            self.logger.info("Looking up values in SSM parameter:{}".format(key_az))
             existing_param = self.ssm.describe_parameters(key_az)
 
             if existing_param:
-                self.logger.info('Found existing SSM parameter, returning'
-                                 ' existing AZ list.')
+                self.logger.info(
+                    "Found existing SSM parameter, returning" " existing AZ list."
+                )
                 return self.ssm.get_parameter(key_az)
         if account is not None:
             # fetch account from list for cross account assume role workflow
@@ -86,12 +87,13 @@ class CFNParamsHandler(object):
             # AZ list for a given region in any account.
             acct = account[0] if isinstance(account, list) else account
             ec2 = self._session(region, acct)
-            self.logger.info("Getting list of AZs in region: {} from"
-                             " account: {}".format(region, acct))
+            self.logger.info(
+                "Getting list of AZs in region: {} from"
+                " account: {}".format(region, acct)
+            )
             return self._get_az(ec2, key_az, qty)
         else:
-            self.logger.info("Creating EC2 Session in {} region"
-                             .format(region))
+            self.logger.info("Creating EC2 Session in {} region".format(region))
             ec2 = EC2(self.logger, region)
             return self._get_az(ec2, key_az, qty)
 
@@ -99,15 +101,20 @@ class CFNParamsHandler(object):
         # Get AZs
         az_list = ec2.describe_availability_zones()
         self.logger.info("_get_azs output: %s" % az_list)
-        random_az_list = ','.join(random.sample(az_list, qty))
-        description = "Contains random AZs selected by Custom Control Tower" \
-                      "Solution"
+        random_az_list = ",".join(random.sample(az_list, qty))
+        description = "Contains random AZs selected by Custom Control Tower" "Solution"
         if key_az:
             self.ssm.put_parameter(key_az, random_az_list, description)
         return random_az_list
 
-    def _create_key_pair(self, account, region, param_key_material=None,
-                         param_key_fingerprint=None, param_key_name=None):
+    def _create_key_pair(
+        self,
+        account,
+        region,
+        param_key_material=None,
+        param_key_fingerprint=None,
+        param_key_name=None,
+    ):
         """Creates an ec2 key pair if it does not exist already.
 
         Args:
@@ -122,39 +129,52 @@ class CFNParamsHandler(object):
             key name
         """
         if param_key_name:
-            self.logger.info("Looking up values in SSM parameter:{}"
-                             .format(param_key_name))
+            self.logger.info(
+                "Looking up values in SSM parameter:{}".format(param_key_name)
+            )
             existing_param = self.ssm.describe_parameters(param_key_name)
 
             if existing_param:
                 return self.ssm.get_parameter(param_key_name)
 
-        key_name = sanitize("%s_%s_%s_%s" % ('custom_control_tower', account,
-                                             region,
-                                             time.strftime("%Y-%m-%dT%H-%M-%S")
-                                             ))
+        key_name = sanitize(
+            "%s_%s_%s_%s"
+            % (
+                "custom_control_tower",
+                account,
+                region,
+                time.strftime("%Y-%m-%dT%H-%M-%S"),
+            )
+        )
 
         ec2 = self._session(region, account)
         # create EC2 key pair in member account
-        self.logger.info("Create key pair in the member account {} in"
-                         " region: {}".format(account, region))
+        self.logger.info(
+            "Create key pair in the member account {} in"
+            " region: {}".format(account, region)
+        )
         response = ec2.create_key_pair(key_name)
 
         # add key material and fingerprint in the SSM Parameter Store
         self.logger.info("Adding Key Material and Fingerprint to SSM PS")
-        description = "Contains EC2 key pair asset created by Custom " \
-                      "Control Tower Solution: " \
-                      "EC2 Key Pair Custom Resource."
+        description = (
+            "Contains EC2 key pair asset created by Custom "
+            "Control Tower Solution: "
+            "EC2 Key Pair Custom Resource."
+        )
         # Get Custom Control Tower KMS Key ID
         key_id = self._get_kms_key_id()
         if param_key_fingerprint:
-            self.ssm.put_parameter_use_cmk(param_key_fingerprint, response
-                                           .get('KeyFingerprint'),
-                                           key_id, description)
+            self.ssm.put_parameter_use_cmk(
+                param_key_fingerprint,
+                response.get("KeyFingerprint"),
+                key_id,
+                description,
+            )
         if param_key_material:
-            self.ssm.put_parameter_use_cmk(param_key_material, response
-                                           .get('KeyMaterial'),
-                                           key_id, description)
+            self.ssm.put_parameter_use_cmk(
+                param_key_material, response.get("KeyMaterial"), key_id, description
+            )
         if param_key_name:
             self.ssm.put_parameter(param_key_name, key_name, description)
 
@@ -171,34 +191,38 @@ class CFNParamsHandler(object):
             alphanum (bool): [optional] if False it will also include
                              ';:=+!@#%^&*()[]{}' in the character set
         """
-        response = '_get_ssm_secure_string_' + key_password
+        response = "_get_ssm_secure_string_" + key_password
         param_exists = False
         if key_password:
-            self.logger.info("Looking up values in SSM parameter:{}"
-                             .format(key_password))
+            self.logger.info(
+                "Looking up values in SSM parameter:{}".format(key_password)
+            )
             existing_param = self.ssm.describe_parameters(key_password)
 
             if existing_param:
                 param_exists = True
 
         if not param_exists:
-            additional = ''
+            additional = ""
             if not alphanum:
-                additional = ';:=+!@#%^&*()[]{}'
+                additional = ";:=+!@#%^&*()[]{}"
             password = random_pwd_generator(length, additional)
 
             self.logger.info("Adding Random password to SSM Parameter Store")
-            description = "Contains random password created by Custom Control"\
-                          " Tower Solution"
+            description = (
+                "Contains random password created by Custom Control" " Tower Solution"
+            )
 
             if key_password:
                 key_id = self._get_kms_key_id()
-                self.ssm.put_parameter_use_cmk(key_password, password, key_id,
-                                               description)
+                self.ssm.put_parameter_use_cmk(
+                    key_password, password, key_id, description
+                )
         return response
 
-    def update_params(self, params_in, account=None, region=None,
-                      substitute_ssm_values=True):
+    def update_params(
+        self, params_in, account=None, region=None, substitute_ssm_values=True
+    ):
         """Updates SSM parameters
         Args:
             params_in (list): Python List of dict of input params e.g.
@@ -226,34 +250,50 @@ class CFNParamsHandler(object):
             value = param.get("ParameterValue")
 
             if not isinstance(value, list):
-                if value.startswith('$[') and value.endswith(']'):
-                    # Apply transformations
-                    keyword = value[2:-1]
-                    # Check if supported keyword e.g. alfred_ssm_,
-                    # alfred_genaz_, alfred_getaz_, alfred_genuuid, etc.
-                    if keyword.startswith('alfred_ssm_'):
-                        value, param_flag = self._update_alfred_ssm(
-                            keyword, value, substitute_ssm_values)
-                        if param_flag is False:
-                            raise KeyError("Missing SSM parameter name for:"
-                                            " {} in the parameters JSON file."
-                                            .format(key))
-                    elif keyword.startswith('alfred_genkeypair'):
-                        value = self._update_alfred_genkeypair(
-                            param, account, region)
-                    elif keyword.startswith('alfred_genpass_'):
-                        value = self._update_alfred_genpass(
-                            keyword, param)
-                    elif keyword.startswith('alfred_genaz_'):
-                        value = self._update_alfred_genaz(
-                            keyword, param, account, region)
-                    else:
-                        value = keyword
+                value = self._parse_alfred_ssm(
+                    key, value, account, region, substitute_ssm_values
+                )
+            else:
+                new_value_list = []
+                for i in value:
+                    new_value_list.append(
+                        self._parse_alfred_ssm(
+                            key, i, account, region, substitute_ssm_values
+                        )
+                    )
+                value = new_value_list
 
             params_out.update({key: value})
 
         self.logger.info("params out : {}".format(params_out))
         return params_out
+
+    def _parse_alfred_ssm(
+        self, key, value, account=None, region=None, substitute_ssm_values=True
+    ):
+        if value.startswith("$[") and value.endswith("]"):
+            # Apply transformations
+            keyword = value[2:-1]
+            # Check if supported keyword e.g. alfred_ssm_,
+            # alfred_genaz_, alfred_getaz_, alfred_genuuid, etc.
+            if keyword.startswith("alfred_ssm_"):
+                value, param_flag = self._update_alfred_ssm(
+                    keyword, value, substitute_ssm_values
+                )
+                if param_flag is False:
+                    raise KeyError(
+                        "Missing SSM parameter name for:"
+                        " {} in the parameters JSON file.".format(key)
+                    )
+            elif keyword.startswith("alfred_genkeypair"):
+                value = self._update_alfred_genkeypair(param, account, region)
+            elif keyword.startswith("alfred_genpass_"):
+                value = self._update_alfred_genpass(keyword, param)
+            elif keyword.startswith("alfred_genaz_"):
+                value = self._update_alfred_genaz(keyword, param, account, region)
+            else:
+                value = keyword
+        return value
 
     def _update_alfred_ssm(self, keyword, value, substitute_ssm_values):
         """Gets the value of the SSM parameter whose name starts with
@@ -267,7 +307,7 @@ class CFNParamsHandler(object):
         Return:
             value of the SSM parameter
         """
-        ssm_param_name = trim_string_from_front(keyword, 'alfred_ssm_')
+        ssm_param_name = trim_string_from_front(keyword, "alfred_ssm_")
         param_flag = True
 
         if ssm_param_name:
@@ -295,20 +335,23 @@ class CFNParamsHandler(object):
         keymaterial_param_name = None
         keyfingerprint_param_name = None
         keyname_param_name = None
-        ssm_parameters = param.get('ssm_parameters', [])
+        ssm_parameters = param.get("ssm_parameters", [])
         if type(ssm_parameters) is list:
             for ssm_parameter in ssm_parameters:
-                val = ssm_parameter.get('value')[2:-1]
-                if val.lower() == 'keymaterial':
-                    keymaterial_param_name = ssm_parameter.get('name')
-                elif val.lower() == 'keyfingerprint':
-                    keyfingerprint_param_name = ssm_parameter.get('name')
-                elif val.lower() == 'keyname':
-                    keyname_param_name = ssm_parameter.get('name')
-        value = self._create_key_pair(account, region,
-                                      keymaterial_param_name,
-                                      keyfingerprint_param_name,
-                                      keyname_param_name)
+                val = ssm_parameter.get("value")[2:-1]
+                if val.lower() == "keymaterial":
+                    keymaterial_param_name = ssm_parameter.get("name")
+                elif val.lower() == "keyfingerprint":
+                    keyfingerprint_param_name = ssm_parameter.get("name")
+                elif val.lower() == "keyname":
+                    keyname_param_name = ssm_parameter.get("name")
+        value = self._create_key_pair(
+            account,
+            region,
+            keymaterial_param_name,
+            keyfingerprint_param_name,
+            keyname_param_name,
+        )
         return value
 
     def _update_alfred_genpass(self, keyword, param):
@@ -323,19 +366,19 @@ class CFNParamsHandler(object):
         Return:
             generated random password
         """
-        sub_string = trim_string_from_front(keyword, 'alfred_genpass_')
+        sub_string = trim_string_from_front(keyword, "alfred_genpass_")
         if sub_string:
             pw_length = int(sub_string)
         else:
             pw_length = 8
 
         password_param_name = None
-        ssm_parameters = param.get('ssm_parameters', [])
+        ssm_parameters = param.get("ssm_parameters", [])
         if type(ssm_parameters) is list:
             for ssm_parameter in ssm_parameters:
-                val = ssm_parameter.get('value')[2:-1]
-                if val.lower() == 'password':
-                    password_param_name = ssm_parameter.get('name')
+                val = ssm_parameter.get("value")[2:-1]
+                if val.lower() == "password":
+                    password_param_name = ssm_parameter.get("name")
         value = self.random_password(pw_length, password_param_name, False)
         return value
 
@@ -353,19 +396,20 @@ class CFNParamsHandler(object):
         Return:
             list of random az's
         """
-        sub_string = trim_string_from_front(keyword, 'alfred_genaz_')
+        sub_string = trim_string_from_front(keyword, "alfred_genaz_")
         if sub_string:
             no_of_az = int(sub_string)
         else:
             no_of_az = 2
 
         az_param_name = None
-        ssm_parameters = param.get('ssm_parameters', [])
+        ssm_parameters = param.get("ssm_parameters", [])
         if type(ssm_parameters) is list:
             for ssm_parameter in ssm_parameters:
-                val = ssm_parameter.get('value')[2:-1]
-                if val.lower() == 'az':
-                    az_param_name = ssm_parameter.get('name')
+                val = ssm_parameter.get("value")[2:-1]
+                if val.lower() == "az":
+                    az_param_name = ssm_parameter.get("name")
         value = self.get_azs_from_member_account(
-            region, no_of_az, account, az_param_name)
+            region, no_of_az, account, az_param_name
+        )
         return value

@@ -23,6 +23,24 @@ logger = Logger(loglevel=log_level)
 cph = CFNParamsHandler(logger)
 ssm = SSM(logger)
 
+@mock_ssm
+def test_update_params():
+    ssm.put_parameter('/key1', 'value1', 'A test parameter', 'String')
+    ssm.put_parameter('/key2', 'value2', 'A test parameter', 'String')
+    ssm.put_parameter('/key3', 'value3', 'A test parameter', 'String')
+    param = [{
+                "ParameterKey": "Key",
+                "ParameterValue":[
+                        "$[alfred_ssm_/key1]",
+                        "$[alfred_ssm_/key2]",
+                        "$[alfred_ssm_/key3]"
+                    ]
+            }]
+   
+    account = 1234567890
+    region = 'us-east-1'
+    value = cph.update_params(param, account, region)
+    assert value == {"Key": ["value1","value2","value3"]}
 
 def test_update_alfred_ssm():
     keyword_ssm = 'alfred_ssm_not_exist_alfred_ssm'
