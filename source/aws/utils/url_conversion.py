@@ -1,5 +1,5 @@
 ###############################################################################
-#  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.    #
+#  Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.    #
 #                                                                             #
 #  Licensed under the Apache License, Version 2.0 (the "License").            #
 #  You may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ def parse_bucket_key_names(http_url):
         http_url
 
     Returns:
-        s3_url
+        bucket_name, key_name, region
     """
     # Handle Amazon S3 path-style URL
     # Needed to handle response from describe_provisioning_artifact API - response['Info']['TemplateUrl']
@@ -73,10 +73,12 @@ def parse_bucket_key_names(http_url):
         parsed_url = urlparse(http_url)
         bucket_name = parsed_url.path.split('/', 2)[1]
         key_name = parsed_url.path.split('/', 2)[2]
+        region = parsed_url.netloc.split('.')[1]
     # Handle Amazon S3 virtual-hosted–style URL
     # example: https://bucket-name.s3.Region.amazonaws.com/key-name
     else:
         parsed_url = urlparse(http_url)
         bucket_name = parsed_url.netloc.split('.')[0]
         key_name = parsed_url.path[1:]
-    return bucket_name, key_name
+        region = parsed_url.netloc.split('.')[2]
+    return bucket_name, key_name, region

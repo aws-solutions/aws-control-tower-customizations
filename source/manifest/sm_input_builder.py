@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from os import getenv
 
 
 class StateMachineInput(ABC):
@@ -6,6 +7,7 @@ class StateMachineInput(ABC):
     The State Machine input class that declares a set of methods that returns
     abstract input.
     """
+
     @abstractmethod
     def input_map(self):
         pass
@@ -17,15 +19,21 @@ class InputBuilder(StateMachineInput):
     common required keys.
 
     """
-    def __init__(self, resource_properties, request_type='Create'):
+
+    def __init__(self, resource_properties, request_type='Create',
+                 skip_stack_set='no'):
         self._request_type = request_type
         self._resource_properties = resource_properties
+        self._skip_stack_set = skip_stack_set
 
-    def input_map(self):
-        return {
+    def input_map(self) -> dict:
+        input_map = {
             "RequestType": self._request_type,
             "ResourceProperties": self._resource_properties
         }
+        if getenv('STAGE_NAME').upper() == 'STACKSET':
+            input_map.update({"SkipUpdateStackSet": self._skip_stack_set})
+        return input_map
 
 
 class SCPResourceProperties:
@@ -43,6 +51,7 @@ class SCPResourceProperties:
     sm_input = scp_input.input_map()
 
     """
+
     def __init__(self, policy_name, policy_description, policy_url, ou_list,
                  policy_list=None, account_id='', operation='',
                  ou_name_delimiter=''):
@@ -57,12 +66,12 @@ class SCPResourceProperties:
 
     def get_scp_input_map(self):
         return {
-                "PolicyDocument": self._get_policy_document(),
-                "AccountId": self._account_id,
-                "PolicyList": self._policy_list,
-                "Operation": self._operation,
-                "OUList": self._ou_list,
-                "OUNameDelimiter": self._ou_name_delimiter
+            "PolicyDocument": self._get_policy_document(),
+            "AccountId": self._account_id,
+            "PolicyList": self._policy_list,
+            "Operation": self._operation,
+            "OUList": self._ou_list,
+            "OUNameDelimiter": self._ou_name_delimiter
         }
 
     def _get_policy_document(self):
@@ -91,6 +100,7 @@ class StackSetResourceProperties:
         ss_input = InputBuilder(resource_properties.get_stack_set_input_map())
         sm_input = ss_input.input_map()
         """
+
     def __init__(self, stack_set_name, template_url, parameters,
                  capabilities, account_list, region_list, ssm_parameters):
         self._stack_set_name = stack_set_name

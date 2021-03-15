@@ -1,5 +1,5 @@
 ##############################################################################
-#  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.   #
+#  Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.   #
 #                                                                            #
 #  Licensed under the Apache License, Version 2.0 (the "License").           #
 #  You may not use this file except in compliance                            #
@@ -103,7 +103,7 @@ class S3(Boto3Session):
             raise
 
     def list_buckets(self):
-        self.logger.info(self.s3_client.list_buckets())
+        return self.s3_client.list_buckets()
 
     def get_s3_object(self, remote_s3_url):
         """ This function downloads the file from the S3 bucket for a given

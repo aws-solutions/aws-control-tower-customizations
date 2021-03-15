@@ -18,15 +18,15 @@ install_common_pip_packages () {
     which python && python --version
     which python3 && python3 --version
     which pip && pip --version
-    pip install --upgrade pip
+    pip install --upgrade pip==21.0.1
     pip install --upgrade setuptools
-    pip install --upgrade virtualenv
-    pip install --upgrade PyYAML
-    pip install --upgrade yorm
-    pip install --upgrade jinja2
-    pip install --upgrade boto3
-    pip install --upgrade awscli
-    pip install --upgrade requests
+    pip install --upgrade virtualenv==20.4.2
+    pip install --upgrade PyYAML==5.3.1
+    pip install --upgrade yorm==1.6.2
+    pip install --upgrade jinja2==2.11.3
+    pip install --upgrade boto3==1.17.3
+    pip install --upgrade awscli==1.19.3
+    pip install --upgrade requests==2.25.1
 }
 
 build_dependencies () {
@@ -35,14 +35,14 @@ build_dependencies () {
 
     # install pip packages
     install_common_pip_packages
-    pip install --upgrade pykwalify
-    pip install cfn_flip
+    pip install --upgrade pykwalify==1.8.0
+    pip install cfn_flip==1.2.3
     pip freeze
 
     # Install CFN Nag
     ruby -v
     gem -v
-    gem install cfn-nag -v 0.3.64
+    gem install cfn-nag -v 0.7.2
 }
 
 scp_dependencies () {

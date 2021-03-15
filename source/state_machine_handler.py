@@ -1,5 +1,5 @@
 ##############################################################################
-#  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.   #
+#  Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.   #
 #                                                                            #
 #  Licensed under the Apache License, Version 2.0 (the "License").           #
 #  You may not use this file except in compliance                            #
@@ -19,7 +19,7 @@ import json
 import time
 import tempfile
 from random import randint
-import requests
+import os
 from botocore.exceptions import ClientError
 from aws.services.organizations import Organizations as Org
 from aws.services.scp import ServiceControlPolicy as SCP
@@ -204,7 +204,8 @@ class CloudFormation(object):
 
         # if account list is not present then only create StackSet
         # and skip stack instance creation
-        if type(self.params.get('AccountList')) is not list:
+        if type(self.params.get('AccountList')) is not list or \
+                not self.params.get('AccountList'):
             self._set_skip_stack_instance_operation()
             return self.event
         else:  # proceed if account list exists
@@ -530,7 +531,9 @@ class CloudFormation(object):
         self.event.update({'StackSetStatus': value})
         # set create stack instance flag to yes (Handle SM Condition:
         # Create or Delete Stack Instance?)
-        self.event.update({'CreateInstance': 'yes'})
+        # check if the account list is empty
+        create_flag = 'no' if not self.params.get('AccountList') else 'yes'
+        self.event.update({'CreateInstance': create_flag})
         # set delete stack instance flag to no (Handle SM Condition:
         # Delete Stack Instance or Finish?)
         self.event.update({'DeleteInstance': 'no'})
@@ -730,12 +733,15 @@ class ServiceControlPolicy(object):
         self.logger = logger
         self.logger.info(self.__class__.__name__ + " Class Event")
         self.logger.info(event)
-        self.s3 = S3(logger)
 
     def _load_policy(self, http_policy_path):
-        bucket_name, key_name = parse_bucket_key_names(http_policy_path)
+        bucket_name, key_name, region = parse_bucket_key_names(http_policy_path)
         policy_file = tempfile.mkstemp()[1]
-        self.s3.download_file(bucket_name, key_name, policy_file)
+        s3_endpoint_url = "https://s3.%s.amazonaws.com" % region
+        s3 = S3(self.logger,
+                region=region,
+                endpoint_url=s3_endpoint_url)
+        s3.download_file(bucket_name, key_name, policy_file)
 
         self.logger.info("Parsing the policy file: {}".format(policy_file))
 
@@ -1153,10 +1159,10 @@ class StackSetSMRequests(object):
             else:
                 ssm_value = 'NotFound'
         if ssm_value == 'NotFound':
-            # Raise Exception if the key is not found in
-            # the State Machine output.
-            raise KeyError("Unable to find the key: {} in the"
-                            " State Machine Output".format(value))
+            # Print error if the key is not found in the State Machine output.
+            # Handle scenario if only StackSet is created not stack instances.
+            self.logger.error("Unable to find the key: {} in the"
+                              " State Machine Output".format(value))
         else:
             self.logger.info("Adding value for SSM Parameter Store"
                              " Key: {}".format(key))
@@ -1167,7 +1173,7 @@ class StackSetSMRequests(object):
                          + inspect.stack()[0][3])
         send = SolutionMetrics(self.logger)
         data = {"StateMachineExecutionCount": "1"}
-        send.send_metrics(data)
+        send.solution_metrics(data)
         return self.event
 
     def random_wait(self):

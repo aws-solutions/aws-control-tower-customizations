@@ -1,54 +1,108 @@
 import os
 import sys
 import json
+from utils.logger import Logger
 from manifest.manifest import Manifest
 from manifest.stage_to_s3 import StageFile
 from manifest.sm_input_builder import InputBuilder, SCPResourceProperties, \
     StackSetResourceProperties
 from utils.parameter_manipulation import transform_params
+from utils.string_manipulation import convert_list_values_to_string
 from aws.services.s3 import S3
 from aws.services.organizations import Organizations
 from manifest.cfn_params_handler import CFNParamsHandler
+from metrics.solution_metrics import SolutionMetrics
+
+VERSION_1 = '2020-01-01'
+VERSION_2 = '2021-03-15'
+
+logger = Logger(loglevel=os.environ['LOG_LEVEL'])
+
+
+def scp_manifest():
+    # determine manifest version
+    manifest = Manifest(os.environ.get('MANIFEST_FILE_PATH'))
+    if manifest.version == VERSION_1:
+        get_scp_input = SCPParser()
+        return get_scp_input.parse_scp_manifest_v1()
+    elif manifest.version == VERSION_2:
+        get_scp_input = SCPParser()
+        return get_scp_input.parse_scp_manifest_v2()
+
+
+def stack_set_manifest():
+    # determine manifest version
+    manifest = Manifest(os.environ.get('MANIFEST_FILE_PATH'))
+    send = SolutionMetrics(logger)
+    if manifest.version == VERSION_1:
+        data = {"ManifestVersion": VERSION_1}
+        send.solution_metrics(data)
+        get_stack_set_input = StackSetParser()
+        return get_stack_set_input.parse_stack_set_manifest_v1()
+    elif manifest.version == VERSION_2:
+        data = {"ManifestVersion": VERSION_2}
+        send.solution_metrics(data)
+        get_stack_set_input = StackSetParser()
+        return get_stack_set_input.parse_stack_set_manifest_v2()
 
 
 class SCPParser:
     """
-    This class parses the Service Control Policies section of the manifest file.
-    It converts the yaml (manifest) into JSON input for the SCP state machine.
+    This class parses the Service Control Policies resources from the manifest
+    file. It converts the yaml (manifest) into JSON input for the SCP state
+    machine.
     :return List of JSON
 
     Example:
-        get_scp_input = SCPParser(logger)
-        list_of_inputs = get_scp_input.parse_scp_manifest()
+        get_scp_input = SCPParser()
+        list_of_inputs = get_scp_input.parse_scp_manifest_v1|2()
     """
-    def __init__(self, logger):
+
+    def __init__(self):
         self.logger = logger
         self.manifest = Manifest(os.environ.get('MANIFEST_FILE_PATH'))
 
-    def parse_scp_manifest(self) -> list:
+    def parse_scp_manifest_v1(self) -> list:
+        state_machine_inputs = []
         self.logger.info(
             "Processing SCPs from {} file".format(
                 os.environ.get('MANIFEST_FILE_PATH')))
-        state_machine_inputs = []
-
+        build = BuildStateMachineInput(self.manifest.region)
         for policy in self.manifest.organization_policies:
+            local_file = StageFile(self.logger, policy.policy_file)
+            policy_url = local_file.get_staged_file()
             # Generate the list of OUs to attach this SCP to
-            ou_list = []
             attach_ou_list = set(policy.apply_to_accounts_in_ou)
 
-            for ou in attach_ou_list:
-                ou_list.append((ou, 'Attach'))
+            state_machine_inputs.append(build.scp_sm_input(
+                attach_ou_list,
+                policy,
+                policy_url))
 
-            local_file = StageFile(self.logger, policy.policy_file)
-            policy_url = local_file.stage_file()
-            resource_properties = SCPResourceProperties(policy.name,
-                                                        policy.description,
-                                                        policy_url,
-                                                        ou_list)
-            scp_input = InputBuilder(resource_properties.get_scp_input_map())
-            sm_input = scp_input.input_map()
-            self.logger.debug(sm_input)
-            state_machine_inputs.append(sm_input)
+        # Exit if there are no organization policies
+        if len(state_machine_inputs) == 0:
+            self.logger.info("Organization policies not found"
+                             " in the manifest.")
+            sys.exit(0)
+        else:
+            return state_machine_inputs
+
+    def parse_scp_manifest_v2(self) -> list:
+        state_machine_inputs = []
+        self.logger.info(
+            "Processing SCPs from {} file".format(
+                os.environ.get('MANIFEST_FILE_PATH')))
+        build = BuildStateMachineInput(self.manifest.region)
+        for resource in self.manifest.resources:
+            if resource.deploy_method == 'scp':
+                local_file = StageFile(self.logger, resource.resource_file)
+                policy_url = local_file.get_staged_file()
+                attach_ou_list = set(
+                    resource.deployment_targets.organizational_units)
+                state_machine_inputs.append(build.scp_sm_input(
+                    attach_ou_list,
+                    resource,
+                    policy_url))
 
         # Exit if there are no organization policies
         if len(state_machine_inputs) == 0:
@@ -60,83 +114,64 @@ class SCPParser:
 
 
 class StackSetParser:
-    def __init__(self, logger):
+    """
+    This class parses the Stack Set resources from the manifest file.
+    It converts the yaml (manifest) into JSON input for the Stack Set state
+    machine.
+    :return List of JSON
+
+    Example:
+        get_scp_input = StackSetParser()
+        list_of_inputs = get_scp_input.parse_stack_set_manifest_v1|2()
+    """
+    def __init__(self):
         self.logger = logger
-        self.s3 = S3(logger)
-        self.param_handler = CFNParamsHandler(logger)
         self.manifest = Manifest(os.environ.get('MANIFEST_FILE_PATH'))
         self.manifest_folder = os.environ.get('MANIFEST_FOLDER')
 
-    def parse_stack_set_manifest(self):
+    def parse_stack_set_manifest_v1(self) -> list:
 
         self.logger.info("Parsing Core Resources from {} file"
                          .format(os.environ.get('MANIFEST_FILE_PATH')))
-
-        accounts_in_all_ous, ou_id_to_account_map, ou_name_to_id_map, \
-            name_to_account_map = self.get_organization_details()
+        build = BuildStateMachineInput(self.manifest.region)
+        org = OrganizationsData()
+        organizations_data = org.get_organization_details()
         state_machine_inputs = []
 
         for resource in self.manifest.cloudformation_resources:
-            self.logger.info(">>>> START : {} >>>>".format(resource.name))
-            # Handle scenario if 'deploy_to_ou' key
-            # does not exist in the resource
-            try:
-                self.logger.info(resource.deploy_to_ou)
-            except TypeError:
-                resource.deploy_to_ou = []
-
-            # Handle scenario if 'deploy_to_account' key
-            # does not exist in the resource
-            try:
-                self.logger.info(resource.deploy_to_account)
-            except TypeError:
-                resource.deploy_to_account = []
-
-            # find accounts for given ou name
+            self.logger.info(f">>>> START : {resource.name} >>>>")
             accounts_in_ou = []
 
-            # check if OU name list is empty
+            # build OU to accounts map if OU list present in manifest
             if resource.deploy_to_ou:
-                accounts_in_ou = self.get_accounts_in_ou(ou_id_to_account_map,
-                                                         ou_name_to_id_map,
-                                                         resource)
+                accounts_in_ou = org.get_accounts_in_ou(
+                    organizations_data.get("OuIdToAccountMap"),
+                    organizations_data.get("OuNameToIdMap"),
+                    resource.deploy_to_ou)
 
             # convert account numbers to string type
-            account_list = self._convert_list_values_to_string(
+            account_list = convert_list_values_to_string(
                 resource.deploy_to_account)
             self.logger.info(">>>>>> ACCOUNT LIST")
             self.logger.info(account_list)
 
-            sanitized_account_list = self.get_final_account_list(
-                account_list, accounts_in_all_ous,
-                accounts_in_ou, name_to_account_map)
+            sanitized_account_list = org.get_final_account_list(
+                account_list, organizations_data.get("AccountsInAllOUs"),
+                accounts_in_ou, organizations_data.get("NameToAccountMap"))
 
             self.logger.info("Print merged account list - accounts in manifest"
                              " + account under OU in manifest")
             self.logger.info(sanitized_account_list)
 
-            # Raise exception if account list is empty
-            if not sanitized_account_list:
-                raise ValueError("The account list must have at least 1 "
-                                 "valid account id. Please check the manifest"
-                                 " under CloudFormation resource: {}. "
-                                 "\n Account List: {} \n OU list: {}"
-                                 .format(resource.name,
-                                         resource.deploy_to_account,
-                                         resource.deploy_to_ou))
-
             if resource.deploy_method.lower() == 'stack_set':
-                sm_input = self._get_state_machine_input(
+                sm_input = build.stack_set_state_machine_input_v1(
                     resource, sanitized_account_list)
                 state_machine_inputs.append(sm_input)
             else:
-                raise ValueError("Unsupported deploy_method: {} found for "
-                                 "resource {} and Account: {} in Manifest"
-                                 .format(resource.deploy_method,
-                                         resource.name,
-                                         sanitized_account_list))
-            self.logger.info("<<<<<<<<< FINISH : {} <<<<<<<<<"
-                             .format(resource.name))
+                raise ValueError(
+                    f"Unsupported deploy_method: {resource.deploy_method} "
+                    f"found for resource {resource.name}")
+            self.logger.info(f"<<<<<<<<< FINISH : {resource.name} <<<<<<<<<")
 
         # Exit if there are no CloudFormation resources
         if len(state_machine_inputs) == 0:
@@ -146,21 +181,240 @@ class StackSetParser:
         else:
             return state_machine_inputs
 
+    def parse_stack_set_manifest_v2(self) -> list:
+
+        self.logger.info("Parsing Core Resources from {} file"
+                         .format(os.environ.get('MANIFEST_FILE_PATH')))
+        build = BuildStateMachineInput(self.manifest.region)
+        org = OrganizationsData()
+        organizations_data = org.get_organization_details()
+        state_machine_inputs = []
+
+        for resource in self.manifest.resources:
+            if resource.deploy_method == 'stack_set':
+                self.logger.info(f">>>> START : {resource.name} >>>>")
+                accounts_in_ou = []
+
+                # build OU to accounts map if OU list present in manifest
+                if resource.deployment_targets.organizational_units:
+                    accounts_in_ou = org.get_accounts_in_ou(
+                        organizations_data.get("OuIdToAccountMap"),
+                        organizations_data.get("OuNameToIdMap"),
+                        resource.deployment_targets.organizational_units)
+
+                # convert account numbers to string type
+                account_list = convert_list_values_to_string(
+                    resource.deployment_targets.accounts)
+                self.logger.info(">>>>>> ACCOUNT LIST")
+                self.logger.info(account_list)
+
+                sanitized_account_list = org.get_final_account_list(
+                    account_list, organizations_data.get("AccountsInAllOUs"),
+                    accounts_in_ou, organizations_data.get("NameToAccountMap"))
+
+                self.logger.info("Print merged account list - accounts in "
+                                 "manifest + account under OU in manifest")
+                self.logger.info(sanitized_account_list)
+
+                if resource.deploy_method.lower() == 'stack_set':
+                    sm_input = build.stack_set_state_machine_input_v2(
+                        resource, sanitized_account_list)
+                    state_machine_inputs.append(sm_input)
+                else:
+                    raise ValueError(
+                        f"Unsupported deploy_method: {resource.deploy_method} "
+                        f"found for resource {resource.name}")
+                self.logger.info(f"<<<<<<<<< FINISH : {resource.name} <<<<<<<<")
+
+        # Exit if there are no CloudFormation resources
+        if len(state_machine_inputs) == 0:
+            self.logger.info("CloudFormation resources not found in the "
+                             "manifest")
+            sys.exit(0)
+        else:
+            return state_machine_inputs
+
+
+class BuildStateMachineInput:
+    """
+    This class build state machine inputs for SCP and Stack Set state machines
+
+    """
+    def __init__(self, region):
+        self.logger = logger
+        self.param_handler = CFNParamsHandler(logger)
+        self.manifest_folder = os.environ.get('MANIFEST_FOLDER')
+        self.region = region
+        self.s3 = S3(logger)
+
+    def scp_sm_input(self, attach_ou_list, policy, policy_url) -> dict:
+        ou_list = []
+
+        for ou in attach_ou_list:
+            ou_list.append((ou, 'Attach'))
+        resource_properties = SCPResourceProperties(policy.name,
+                                                    policy.description,
+                                                    policy_url,
+                                                    ou_list)
+        scp_input = InputBuilder(resource_properties.get_scp_input_map())
+        sm_input = scp_input.input_map()
+        self.logger.debug("&&&&& sm_input &&&&&&")
+        self.logger.debug(sm_input)
+        return sm_input
+
+    def stack_set_state_machine_input_v1(self, resource, account_list) -> dict:
+
+        local_file = StageFile(self.logger, resource.template_file)
+        template_url = local_file.get_staged_file()
+
+        # set region variables
+        if len(resource.regions) > 0:
+            region = resource.regions[0]
+            region_list = resource.regions
+        else:
+            region = self.region
+            region_list = [region]
+
+        # if parameter file link is provided for the CFN resource
+
+        parameters = self._load_params_from_file(resource.parameter_file)
+
+        sm_params = self.param_handler.update_params(parameters, account_list,
+                                                     region, False)
+
+        ssm_parameters = self._create_ssm_input_map(resource.ssm_parameters)
+
+        # generate state machine input list
+        stack_set_name = "CustomControlTower-{}".format(resource.name)
+        resource_properties = StackSetResourceProperties(stack_set_name,
+                                                         template_url,
+                                                         sm_params,
+                                                         os.environ
+                                                         .get('CAPABILITIES'),
+                                                         account_list,
+                                                         region_list,
+                                                         ssm_parameters)
+        ss_input = InputBuilder(resource_properties.get_stack_set_input_map())
+        return ss_input.input_map()
+
+    def stack_set_state_machine_input_v2(self, resource, account_list) -> dict:
+
+        local_file = StageFile(self.logger, resource.resource_file)
+        template_url = local_file.get_staged_file()
+
+        parameters = {}
+        # set region variables
+        if len(resource.regions) > 0:
+            region = resource.regions[0]
+            region_list = resource.regions
+        else:
+            region = self.region
+            region_list = [region]
+
+        # if parameter file link is provided for the CFN resource
+        if resource.parameter_file == "":
+            self.logger.info("parameter_file property not found in the "
+                             "manifest")
+            self.logger.info(resource.parameter_file)
+            self.logger.info(resource.parameters)
+            parameters = self._load_params_from_manifest(resource.parameters)
+        elif not resource.parameters:
+            self.logger.info("parameters property not found in the "
+                             "manifest")
+            self.logger.info(resource.parameter_file)
+            self.logger.info(resource.parameters)
+            parameters = self._load_params_from_file(resource.parameter_file)
+
+        sm_params = self.param_handler.update_params(parameters, account_list,
+                                                     region, False)
+
+        self.logger.info("Input Parameters for State Machine: {}".format(
+            sm_params))
+
+        ssm_parameters = self._create_ssm_input_map(resource.export_outputs)
+
+        # generate state machine input list
+        stack_set_name = "CustomControlTower-{}".format(resource.name)
+        resource_properties = StackSetResourceProperties(stack_set_name,
+                                                         template_url,
+                                                         sm_params,
+                                                         os.environ
+                                                         .get('CAPABILITIES'),
+                                                         account_list,
+                                                         region_list,
+                                                         ssm_parameters)
+        ss_input = InputBuilder(resource_properties.get_stack_set_input_map())
+        return ss_input.input_map()
+
+    def _load_params_from_manifest(self, parameter_list: list):
+
+        self.logger.info("Replace the keys with CloudFormation "
+                         "Parameter data type")
+        params_list = []
+        for item in parameter_list:
+            # must initialize params inside loop to avoid overwriting values
+            # for existing items
+            params = {}
+            params.update({"ParameterKey": item.parameter_key})
+            params.update({"ParameterValue": item.parameter_value})
+            params_list.append(params)
+        return params_list
+
+    def _load_params_from_file(self, relative_parameter_path):
+        if relative_parameter_path.lower().startswith('s3'):
+            parameter_file = self.s3.get_s3_object(relative_parameter_path)
+        else:
+            parameter_file = os.path.join(self.manifest_folder,
+                                          relative_parameter_path)
+
+        self.logger.info("Parsing the parameter file: {}".format(
+            parameter_file))
+
+        with open(parameter_file, 'r') as content_file:
+            parameter_file_content = content_file.read()
+
+        params = json.loads(parameter_file_content)
+        return params
+
+    def _create_ssm_input_map(self, ssm_parameters):
+        ssm_input_map = {}
+
+        for ssm_parameter in ssm_parameters:
+            key = ssm_parameter.name
+            value = ssm_parameter.value
+            ssm_value = self.param_handler.update_params(
+                transform_params({key: value})
+            )
+            ssm_input_map.update(ssm_value)
+        return ssm_input_map
+
+
+class OrganizationsData:
+    """
+    This class build organization details including active accounts under
+    an OU, account to OU mapping, OU name to OU id mapping, account name to
+    account id mapping, etc.
+    """
+    def __init__(self):
+        self.logger = logger
+
     def get_accounts_in_ou(self, ou_id_to_account_map, ou_name_to_id_map,
-                           resource):
+                           ou_list):
         accounts_in_ou = []
         ou_ids_manifest = []
+
         # convert OU Name to OU IDs
-        for ou_name in resource.deploy_to_ou:
+        for ou_name in ou_list:
             ou_id = [value for key, value in ou_name_to_id_map.items()
                      if ou_name == key]
             ou_ids_manifest.extend(ou_id)
+
         # convert OU IDs to accounts
         for ou_id, accounts in ou_id_to_account_map.items():
             if ou_id in ou_ids_manifest:
                 accounts_in_ou.extend(accounts)
         self.logger.info(">>> Accounts: {} in OUs: {}"
-                         .format(accounts_in_ou, resource.deploy_to_ou))
+                         .format(accounts_in_ou, ou_list))
         return accounts_in_ou
 
     def get_final_account_list(self, account_list, accounts_in_all_ous,
@@ -200,14 +454,10 @@ class StackSetParser:
         # remove duplicate accounts
         return list(set(sanitized_account_list))
 
-    def get_organization_details(self):
-        """Gets organization details including active accounts under an OU,
-            account to OU mapping, OU name to OU id mapping, account name to
-            account id mapping, etc.
-        Args:
-            None
-
+    def get_organization_details(self) -> dict:
+        """
         Return:
+            dict with following properties:
             accounts_in_all_ous: list. Active accounts
             ou_id_to_account_map: dictionary. Accounts for each OU at the root
                                   level
@@ -234,8 +484,12 @@ class StackSetParser:
         # key: account name; value: account id
         name_to_account_map = self.get_account_for_name(org)
 
-        return accounts_in_all_ous, ou_id_to_account_map, \
-            ou_name_to_id_map, name_to_account_map
+        return {
+            "AccountsInAllOUs": accounts_in_all_ous,
+            "OuIdToAccountMap": ou_id_to_account_map,
+            "OuNameToIdMap": ou_name_to_id_map,
+            "NameToAccountMap": name_to_account_map
+        }
 
     def _get_ou_ids(self, org):
         """Get list of accounts under each OU
@@ -326,77 +580,3 @@ class StackSetParser:
         self.logger.info(_name_to_account_map)
 
         return _name_to_account_map
-
-    # return list of strings
-    @staticmethod
-    def _convert_list_values_to_string(_list):
-        return list(map(str, _list))
-
-    def _get_state_machine_input(self, resource, account_list) -> dict:
-        local_file = StageFile(self.logger, resource.template_file)
-        template_url = local_file.get_staged_file()
-
-        parameters = {}
-
-        # set region variables
-        if len(resource.regions) > 0:
-            region = resource.regions[0]
-            region_list = resource.regions
-        else:
-            region = self.manifest.region
-            region_list = [region]
-
-        # if parameter file link is provided for the CFN resource
-        if resource.parameter_file:
-            parameters = self._load_params(resource.parameter_file,
-                                           account_list,
-                                           region)
-
-        ssm_parameters = self._create_ssm_input_map(resource.ssm_parameters)
-
-        # generate state machine input list
-        stack_set_name = "CustomControlTower-{}".format(resource.name)
-        resource_properties = StackSetResourceProperties(stack_set_name,
-                                                         template_url,
-                                                         parameters,
-                                                         os.environ
-                                                         .get('CAPABILITIES'),
-                                                         account_list,
-                                                         region_list,
-                                                         ssm_parameters)
-        ss_input = InputBuilder(resource_properties.get_stack_set_input_map())
-        return ss_input.input_map()
-
-    def _load_params(self, relative_parameter_path, account=None, region=None):
-        if relative_parameter_path.lower().startswith('s3'):
-            parameter_file = self.s3.get_s3_object(relative_parameter_path)
-        else:
-            parameter_file = os.path.join(self.manifest_folder,
-                                          relative_parameter_path)
-
-        self.logger.info("Parsing the parameter file: {}".format(
-            parameter_file))
-
-        with open(parameter_file, 'r') as content_file:
-            parameter_file_content = content_file.read()
-
-        params = json.loads(parameter_file_content)
-
-        sm_params = self.param_handler.update_params(params, account,
-                                                     region, False)
-
-        self.logger.info("Input Parameters for State Machine: {}".format(
-            sm_params))
-        return sm_params
-
-    def _create_ssm_input_map(self, ssm_parameters):
-        ssm_input_map = {}
-
-        for ssm_parameter in ssm_parameters:
-            key = ssm_parameter.name
-            value = ssm_parameter.value
-            ssm_value = self.param_handler.update_params(
-                transform_params({key: value})
-            )
-            ssm_input_map.update(ssm_value)
-        return ssm_input_map

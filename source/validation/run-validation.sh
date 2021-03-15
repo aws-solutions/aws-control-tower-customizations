@@ -5,6 +5,8 @@ CURRENT_PATH=$(pwd)
 SUCCESS=0
 FAILED=1
 EXIT_STATUS=$SUCCESS
+VERSION_1='2020-01-01'
+VERSION_2='2021-03-15'
 
 set_failed_exit_status() {
   echo "^^^ Caught an error: Setting exit status flag to $FAILED ^^^"
@@ -23,6 +25,36 @@ exit_shell_script() {
     fi
 }
 
+validate_template_file() {
+  echo "Running aws cloudformation validate-template on $template_url"
+  aws cloudformation validate-template --template-url "$template_url" --region "$AWS_REGION"
+  if [ $? -ne 0 ]
+  then
+    echo "ERROR: CloudFormation template failed validation - $template_url"
+    set_failed_exit_status
+  fi
+
+  echo "Running cfn_nag_scan on $tmp_file"
+  cfn_nag_scan --input-path "$tmp_file"
+  if [ $? -ne 0 ]
+  then
+    echo "ERROR: CFN Nag failed validation - $file_name"
+    set_failed_exit_status
+  fi
+}
+
+validate_parameter_file() {
+  echo "Running json validation on $tmp_file"
+  python -m json.tool < "$tmp_file"
+  if [ $? -ne 0 ]
+  then
+    echo "ERROR: CloudFormation parameter file failed validation - $file_name"
+    set_failed_exit_status
+  else
+    echo "NO ISSUE WITH JSON"
+  fi
+}
+
 echo "Printing artifact bucket name: $ARTIFACT_BUCKET"
 
 python3 -c 'import yaml,sys;yaml.safe_load(sys.stdin)' < manifest.yaml
@@ -35,10 +67,27 @@ fi
 echo "Manifest file is a valid YAML"
 
 # Validate manifest schema
-pykwalify -d manifest.yaml -s validation/manifest.schema.yaml -e validation/custom_validation.py
-if [ $? -ne 0 ]
+MANIFEST_VERSION=$(grep 'version' manifest.yaml | cut -f2 -d: | sed 's/ //g')
+if [ "$MANIFEST_VERSION" == "$VERSION_1" ]
 then
-  echo "ERROR: Manifest file failed schema validation"
+  echo "WARNING: You are using older version $VERSION_1 of the schema. We recommend you to update your manifest file schema. See Developer Guide for details."
+  pykwalify -d manifest.yaml -s validation/manifest.schema.yaml -e validation/custom_validation.py
+  if [ $? -ne 0 ]
+  then
+  echo "ERROR: Manifest file failed V1 schema validation"
+  set_failed_exit_status
+  fi
+elif [ "$MANIFEST_VERSION" == "$VERSION_2" ]
+then
+  echo "Validating manifest with schema version: $VERSION_2"
+  pykwalify -d manifest.yaml -s validation/manifest-v2.schema.yaml -e validation/custom_validation.py
+  if [ $? -ne 0 ]
+  then
+  echo "ERROR: Manifest file failed V2 schema validation"
+  set_failed_exit_status
+  fi
+else
+  echo "ERROR: Invalid manifest schema version."
   set_failed_exit_status
 fi
 
@@ -49,7 +98,7 @@ check_files=$(grep '_file:' < manifest.yaml | grep -v '^ *#' | tr -s ' ' | tr -d
 for file_name in $check_files ; do
   # run aws cloudformation validate-template, cfn_nag_scan and json validate on all **remote** templates / parameters files
   if [[ $file_name == s3* ]]; then
-    echo "S3 URL exists: $file_name"
+    echo "S3 URL path found: $file_name"
     tmp_file=$(mktemp)
     echo "Downloading $file_name to $tmp_file"
     aws s3 cp "$file_name" "$tmp_file" --only-show-errors
@@ -66,37 +115,32 @@ for file_name in $check_files ; do
               fi
           done
           template_url="https://$BUCKET.s3.amazonaws.com/${KEY:1}"
-
-          echo "Running aws cloudformation validate-template on $template_url"
-          aws cloudformation validate-template --template-url "$template_url" --region "$AWS_REGION"
-          if [ $? -ne 0 ]
-          then
-            echo "ERROR: CloudFormation template failed validation - $template_url"
-            set_failed_exit_status
-          fi
-
-          echo "Running cfn_nag_scan on $tmp_file"
-          cfn_nag_scan --input-path "$tmp_file"
-          if [ $? -ne 0 ]
-          then
-            echo "ERROR: CFN Nag failed validation - $file_name"
-            set_failed_exit_status
-          fi
+          validate_template_file
         elif [[ $file_name == *json ]]; then
-          echo "Running json validation on $tmp_file"
-          python -m json.tool < "$tmp_file"
-          if [ $? -ne 0 ]
-          then
-            echo "ERROR: CloudFormation parameter file failed validation - $file_name"
-            set_failed_exit_status
-          else
-            echo "NO ISSUE WITH JSON"
-          fi
+          validate_parameter_file
         fi
     else
       echo "ERROR: S3 URL does not exist: $file_name"
       set_failed_exit_status
     fi
+  # check if the resource file path is starting with http
+  elif [[ $file_name == http* ]]; then
+    echo "HTTPS URL path exists: $file_name"
+    tmp_file=$(mktemp)
+    echo "Downloading $file_name"
+    curl --fail -o "$tmp_file" "$file_name"
+    if [[ $? == 0 ]]; then
+        echo "HTTPS URL exists: $file_name"
+        if [[ $file_name == *template ]]; then
+          template_url=$file_name
+          validate_template_file
+        elif [[ $file_name == *json ]]; then
+          validate_parameter_file
+        fi
+    else
+      echo "ERROR: HTTPS URL does not exist: $file_name"
+      set_failed_exit_status
+  fi
   elif [ -f "$CURRENT_PATH"/"$file_name" ]; then
     echo "File $file_name exists"
   else

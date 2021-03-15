@@ -1,5 +1,5 @@
 ###############################################################################
-#  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.    #
+#  Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.    #
 #                                                                             #
 #  Licensed under the Apache License, Version 2.0 (the "License").            #
 #  You may not use this file except in compliance with the License.
@@ -32,22 +32,22 @@ class SolutionMetrics(object):
 
     def _get_parameter_value(self, key):
         response = self.ssm.describe_parameters(key)
-        # get paramter if key exist
+        # get parameter if key exist
         if response:
             value = self.ssm.get_parameter(key)
         else:
             value = 'ssm-param-key-not-found'
         return value
 
-    def send_metrics(self, data,
-                     solution_id=os.environ.get('SOLUTION_ID'),
-                     url=os.environ.get('METRICS_URL')):
+    def solution_metrics(self, data,
+                         solution_id=os.environ.get('SOLUTION_ID'),
+                         url=os.environ.get('METRICS_URL')):
 
         """Sends anonymous customer metrics to s3 via API gateway owned and
            managed by the Solutions Builder team.
 
         Args:
-            data - anonymous customer metrics to be sent
+            data: anonymous customer metrics to be sent
             solution_id: unique id of the solution
             url: url for API Gateway via which data is sent
 
@@ -63,8 +63,7 @@ class SolutionMetrics(object):
                           'UUID': uuid,
                           'Data': data}
                 metrics = dict(time_stamp, **params)
-                json_data = dumps(metrics, indent=4, cls=DecimalEncoder,
-                                  sort_keys=True)
+                json_data = dumps(metrics, cls=DecimalEncoder)
                 headers = {'content-type': 'application/json'}
                 r = requests.post(url, data=json_data, headers=headers)
                 code = r.status_code

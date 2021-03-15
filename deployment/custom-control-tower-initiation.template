@@ -43,7 +43,7 @@ Parameters:
 
   CodeCommitBranchName:
     Description: Name of the branch in CodeCommit repository that contains custom Control Tower configuration.
-    Default: master
+    Default: main
     Type: String
 
   ExistingRepository:
@@ -584,7 +584,7 @@ Resources:
                 Action:
                   - s3:GetObject
                 Resource:
-                  - !Sub arn:${AWS::Partition}:s3:::%TEMPLATE_BUCKET_NAME%/*
+                  - !Sub arn:${AWS::Partition}:s3:::*/* # needed to support validation of remotely sourced templates feature. The host S3 bucket can be created by the customers or partners.
         - PolicyName: "Custom-Control-Tower-SCP-CodeBuild-Policy-StepFunctions"
           PolicyDocument:
             Version: "2012-10-17"
@@ -707,7 +707,7 @@ Resources:
                 Action:
                   - s3:GetObject
                 Resource:
-                  - !Sub arn:${AWS::Partition}:s3:::%TEMPLATE_BUCKET_NAME%/*
+                  - !Sub arn:${AWS::Partition}:s3:::*/* # needed to support validation of remotely sourced templates feature. The host S3 bucket can be created by the customers or partners.
         - PolicyName: "Custom-Control-Tower-StackSet-CodeBuild-Policy-StepFunctions"
           PolicyDocument:
             Version: "2012-10-17"
@@ -828,6 +828,10 @@ Resources:
                     Value: !FindInMap [KMS, Alias, Name]
                   - Name: EXECUTION_ROLE_NAME
                     Value: !FindInMap [AWSControlTower, ExecutionRole, Name]
+                  - Name: SOLUTION_ID
+                    Value: !FindInMap [Solution, Metrics, SolutionID]
+                  - Name: METRICS_URL
+                    Value: !FindInMap [Solution, Metrics, MetricsURL]
           Artifacts:
               Name: !Sub ${CustomControlTowerPipelineArtifactS3Bucket}-Built
               Type: CODEPIPELINE
@@ -2117,17 +2121,24 @@ Resources:
                 "Next": "List StackInstances Accounts"
               },
               "Skip Update StackSet?": {
-                  "Type": "Choice",
-                  "Choices": [
-                    {
-                      "Variable": "$.LoopFlag",
-                      "StringEquals": "yes",
-                      "Next": "Check Instance Pass"
-                    }
-                  ],
-                  "Default": "Update StackSet Pass"
-                },
-
+                 "Type": "Choice",
+                 "Choices": [
+                   {
+                     "Or": [
+                       {
+                         "Variable": "$.LoopFlag",
+                         "StringEquals": "yes"
+                       },
+                       {
+                         "Variable": "$.SkipUpdateStackSet",
+                         "StringEquals": "yes"
+                       }
+                     ],
+                     "Next": "Check Instance Pass"
+                   }
+                 ],
+                 "Default": "Update StackSet Pass"
+                 },
               "Update StackSet Pass": {
                 "Type": "Pass",
                 "Result": {

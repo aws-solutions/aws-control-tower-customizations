@@ -1,5 +1,5 @@
 ##############################################################################
-#  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.   #
+#  Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.   #
 #                                                                            #
 #  Licensed under the Apache License, Version 2.0 (the "License").           #
 #  You may not use this file except in compliance                            #
@@ -51,6 +51,30 @@ class OUList(List):
         super().__init__()
 
 
+@yorm.attr(parameter_key=String)
+@yorm.attr(parameter_value=String)
+class Parameter(AttributeDictionary):
+    def __init__(self, key, value):
+        super().__init__()
+        self.parameter_key = key
+        self.parameter_value = value
+
+
+@yorm.attr(all=Parameter)
+class Parameters(List):
+    def __init__(self):
+        super().__init__()
+
+
+@yorm.attr(accounts=AccountList)
+@yorm.attr(organizational_units=OUList)
+class DeployTargets(AttributeDictionary):
+    def __init__(self):
+        super().__init__()
+        self.accounts = []
+        self.organizational_units = []
+
+
 @yorm.attr(all=String)
 class ApplyToOUList(List):
     def __init__(self):
@@ -65,9 +89,8 @@ class ApplyToOUList(List):
 @yorm.attr(regions=RegionsList)
 @yorm.attr(deploy_to_account=AccountList)
 @yorm.attr(deploy_to_ou=OUList)
-class Resource(AttributeDictionary):
-    def __init__(self, name, template_file, parameter_file, deploy_method,
-                 deploy_to_account, deploy_to_ou):
+class CfnResource(AttributeDictionary):
+    def __init__(self, name, template_file, parameter_file, deploy_method):
         super().__init__()
         self.name = name
         self.template_file = template_file
@@ -79,8 +102,8 @@ class Resource(AttributeDictionary):
         self.ssm_parameters = []
 
 
-@yorm.attr(all=Resource)
-class ResourcesList(List):
+@yorm.attr(all=CfnResource)
+class CfnResourcesList(List):
     def __init__(self):
         super().__init__()
 
@@ -105,13 +128,43 @@ class PolicyList(List):
         super().__init__()
 
 
+@yorm.attr(name=String)
+@yorm.attr(resource_file=String)
+@yorm.attr(parameter_file=String)
+@yorm.attr(deploy_method=String)
+@yorm.attr(export_outputs=SSMList)
+@yorm.attr(regions=RegionsList)
+@yorm.attr(deployment_targets=DeployTargets)
+@yorm.attr(parameters=Parameters)
+class ResourceProps(AttributeDictionary):
+    def __init__(self, name, resource_file, parameters, parameter_file,
+                 deploy_method, deployment_targets, export_outputs, regions):
+        super().__init__()
+        self.name = name
+        self.resource_file = resource_file
+        self.parameter_file = parameter_file
+        self.parameters = parameters
+        self.deploy_method = deploy_method
+        self.deployment_targets = deployment_targets
+        self.regions = regions
+        self.export_outputs = export_outputs
+
+
+@yorm.attr(all=ResourceProps)
+class Resources(List):
+    def __init__(self):
+        super().__init__()
+
+
 @yorm.attr(region=String)
 @yorm.attr(version=String)
-@yorm.attr(cloudformation_resources=ResourcesList)
+@yorm.attr(cloudformation_resources=CfnResourcesList)
 @yorm.attr(organization_policies=PolicyList)
+@yorm.attr(resources=Resources)
 @yorm.sync("{self.manifest_file}", auto_create=False)
 class Manifest:
     def __init__(self, manifest_file):
         self.manifest_file = manifest_file
         self.organization_policies = []
         self.cloudformation_resources = []
+        self.resources = []

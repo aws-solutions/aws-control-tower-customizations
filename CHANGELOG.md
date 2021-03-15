@@ -4,9 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2021-03-15
+### Added
+- Support for new simplified manifest schema (version "2021-03-15"). This does not impact existing customers using manifest version "2020-01-01".
+### Changed
+- Optimization to skip update Stack Set workflow when only new accounts are added to the Stack Set.
+- Ability to create only Stack Sets if the account list is empty. This allows users to configure Stack Set resources with empty Organizational Units. Ref:[GitHub Issue 42](https://github.com/awslabs/aws-control-tower-customizations/issues/42)
+- Pinned versions for all the third-party packages.
+- Update cfn-nag package to v0.7.2 to utilize new rules. This may result in new failures and warning in the build stage. However, it would help you identify new issues.
+- Update default branch name to 'main'.
+- Add support for https path for the resource file in the manifest.
+
 ## [1.2.1] - 2020-10-01
 ### Changed
-- Fix the issue related to incompatibility between latest version of BotoCore and AWS CLI. Ref:[Boto3 Issue #2596](https://github.com/boto/boto3/issues/2596)
+- Fix the issue related to incompatibility between latest version of BotoCore and AWS CLI. Ref: [Boto3 Issue #2596](https://github.com/boto/boto3/issues/2596)
 
 ## [1.2.0] - 2020-06-20
 ### Added

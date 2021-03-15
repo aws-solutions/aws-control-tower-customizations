@@ -1,7 +1,7 @@
 import os
 import sys
 from utils.logger import Logger
-from manifest.manifest_parser import SCPParser, StackSetParser
+import manifest.manifest_parser as parse
 from manifest.sm_execution_manager import SMExecutionManager
 
 
@@ -69,13 +69,11 @@ def main():
 
 
 def get_scp_inputs() -> list:
-    get_scp_input = SCPParser(logger)
-    return get_scp_input.parse_scp_manifest()
+    return parse.scp_manifest()
 
 
 def get_stack_set_inputs() -> list:
-    get_stack_set_input = StackSetParser(logger)
-    return get_stack_set_input.parse_stack_set_manifest()
+    return parse.stack_set_manifest()
 
 
 def launch_state_machine_execution(sm_input_list):
@@ -98,5 +96,6 @@ def launch_state_machine_execution(sm_input_list):
 
 
 if __name__ == '__main__':
-    logger = Logger(loglevel=sys.argv[1])
+    os.environ['LOG_LEVEL'] = sys.argv[1]
+    logger = Logger(loglevel=os.environ['LOG_LEVEL'])
     main()

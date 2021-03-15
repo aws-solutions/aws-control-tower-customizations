@@ -1,5 +1,5 @@
 ##############################################################################
-#  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.   #
+#  Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.   #
 #                                                                            #
 #  Licensed under the Apache License, Version 2.0 (the "License").           #
 #  You may not use this file except in compliance                            #
@@ -42,3 +42,10 @@ def test_extract_string():
     extract_string = "defgh"
     assert string_manipulation.trim_string_from_front(actual_string, 'abc') == \
            extract_string
+
+
+def test_convert_list_values_to_string():
+    list_of_numbers = [11, 22, 33, 44]
+    list_of_strings = string_manipulation.convert_list_values_to_string(list_of_numbers)
+    for string in list_of_strings:
+        assert isinstance(string, str)

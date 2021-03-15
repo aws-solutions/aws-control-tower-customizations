@@ -1,5 +1,5 @@
 ##############################################################################
-#  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.   #
+#  Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.   #
 #                                                                            #
 #  Licensed under the Apache License, Version 2.0 (the "License").           #
 #  You may not use this file except in compliance                            #
@@ -36,6 +36,7 @@ class StackSet(Boto3Session):
             'Caught exception OperationInProgressException'  \
             ' handling the exception...'
 
+    @try_except_retry()
     def describe_stack_set(self, stack_set_name):
         try:
             response = self.cfn_client.describe_stack_set(
@@ -58,6 +59,7 @@ class StackSet(Boto3Session):
             self.logger.log_unhandled_exception(e)
             raise
 
+    @try_except_retry()
     def list_stack_instances(self, **kwargs):
         try:
             response = self.cfn_client.list_stack_instances(**kwargs)
@@ -335,6 +337,7 @@ class StackSet(Boto3Session):
             self.logger.log_unhandled_exception(e)
             raise
 
+    @try_except_retry()
     def list_stack_set_operations(self, **kwargs):
         try:
             response = self.cfn_client.list_stack_set_operations(**kwargs)

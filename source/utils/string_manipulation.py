@@ -1,5 +1,5 @@
 ###############################################################################
-#  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.    #
+#  Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.    #
 #                                                                             #
 #  Licensed under the Apache License, Version 2.0 (the "License").            #
 #  You may not use this file except in compliance with the License.
@@ -69,8 +69,13 @@ def trim_string_from_front(string, remove_starts_with_string):
         return string[len(remove_starts_with_string):]
     else:
         raise ValueError('The beginning of the string does '
-                        'not match the string to be trimmed.')
+                         'not match the string to be trimmed.')
 
 
-def extract_string(str, search_str):
+def extract_string(search_str):
     return str[len(search_str):]
+
+
+def convert_list_values_to_string(_list):
+    return list(map(str, _list))
+

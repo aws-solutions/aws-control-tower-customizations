@@ -1,5 +1,5 @@
 ##############################################################################
-#  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.   #
+#  Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.   #
 #                                                                            #
 #  Licensed under the Apache License, Version 2.0 (the "License").           #
 #  You may not use this file except in compliance                            #
@@ -47,6 +47,8 @@ class StageFile(S3):
 
         if self.relative_file_path.lower().startswith('s3'):
             return self.convert_url()
+        elif self.relative_file_path.lower().startswith('http'):
+            return self.relative_file_path
         else:
             return self.stage_file()
 

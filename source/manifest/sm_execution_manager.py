@@ -21,7 +21,6 @@ class SMExecutionManager:
         self.sm_input_list = sm_input_list
         self.list_sm_exec_arns = []
         self.stack_set_exist = True
-        self.s3 = S3(logger)
         self.solution_metrics = SolutionMetrics(logger)
         self.param_handler = CFNParamsHandler(logger)
         self.state_machine = StateMachine(logger)
@@ -65,14 +64,16 @@ class SMExecutionManager:
                     sm_input,
                     stack_set_name
                 )
+                # template and parameter does not require update
+                updated_sm_input.update({'SkipUpdateStackSet': 'yes'})
             else:
                 # the template or parameters needs to be updated
                 # start SM execution
                 start_execution_flag = True
 
             if start_execution_flag:
-                sm_exec_name = self.get_sm_exec_name(updated_sm_input)
 
+                sm_exec_name = self.get_sm_exec_name(updated_sm_input)
                 sm_exec_arn = self.setup_execution(updated_sm_input,
                                                    sm_exec_name)
                 self.list_sm_exec_arns.append(sm_exec_arn)
@@ -174,12 +175,17 @@ class SMExecutionManager:
                 template_http_url = sm_input.get('ResourceProperties')\
                     .get('TemplateURL', '')
                 if template_http_url:
-                    bucket_name, key_name = parse_bucket_key_names(
+                    bucket_name, key_name, region = parse_bucket_key_names(
                         template_http_url
                     )
                     local_template_file = tempfile.mkstemp()[1]
-                    self.s3.download_file(bucket_name, key_name,
-                                          local_template_file)
+
+                    s3_endpoint_url = "https://s3.%s.amazonaws.com" % region
+                    s3 = S3(self.logger,
+                            region=region,
+                            endpoint_url=s3_endpoint_url)
+                    s3.download_file(bucket_name, key_name,
+                                     local_template_file)
                 else:
                     self.logger.error("TemplateURL in state machine input "
                                       "is empty. Check state_machine_event"

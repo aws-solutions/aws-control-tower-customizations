@@ -1,0 +1,73 @@
+type: map
+mapping:
+  "region":
+    type: str
+    required: True
+  "version":
+    type: date
+    required: True
+    enum: [2021-03-15]
+  "resources":
+    type: seq
+    sequence:
+    - type: map
+      required: True
+      mapping:
+        "name":
+          type: str
+          required: True
+        "description":
+          type: str
+          required: False
+        "resource_file":
+          type:  str
+          required: True
+        "deployment_targets":
+          type: map
+          required: True
+          mapping:
+            "accounts":
+              required: False
+              type: seq
+              sequence:
+                - type: any
+            "organizational_units":
+              required: False
+              type: seq
+              sequence:
+                - type: str
+        "parameter_file":
+          type: str
+        "parameters":
+          type: seq
+          sequence:
+            - type: map
+              required: True
+              mapping:
+                "parameter_key":
+                  type: str
+                  required: True
+                "parameter_value":
+                  type: str
+                  required: True
+        "deploy_method":
+          type: str
+          required: True
+          enum: ['scp', 'stack_set']
+        "regions":
+          type: seq
+          sequence:
+            - type: str
+              unique: True
+        "export_outputs":
+          type: seq
+          sequence:
+            - type: map
+              required: True
+              mapping:
+                "name":
+                  type: str
+                  required: True
+                "value":
+                  type: str
+                  required: True
