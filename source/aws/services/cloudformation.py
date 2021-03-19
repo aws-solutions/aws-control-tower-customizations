@@ -253,8 +253,7 @@ class StackSet(Boto3Session):
                 raise
 
     def update_stack_set(self, stack_set_name, parameter, template_url,
-                         capabilities, failed_tolerance_percent=0,
-                         max_concurrent_percent=100):
+                         capabilities):
         try:
             parameters = []
             param_dict = {}
@@ -280,8 +279,8 @@ class StackSet(Boto3Session):
                     'ADMINISTRATION_ROLE_ARN'),
                 ExecutionRoleName=os.environ.get('EXECUTION_ROLE_NAME'),
                 OperationPreferences={
-                    'FailureTolerancePercentage': failed_tolerance_percent,
-                    'MaxConcurrentPercentage': max_concurrent_percent
+                    'FailureTolerancePercentage': self.failed_tolerance_percent,
+                    'MaxConcurrentPercentage': self.max_concurrent_percent
                 }
             )
             return response
