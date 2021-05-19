@@ -29,10 +29,12 @@ class StackSet(Boto3Session):
             os.environ.get('MAX_CONCURRENT_PERCENT', 100))
         self.failed_tolerance_percent = int(
             os.environ.get('FAILED_TOLERANCE_PERCENT', 10))
+        self.region_concurrency_type = os.environ.get(
+            'REGION_CONCURRENCY_TYPE', 'PARALLEL').upper()
         self.max_results_per_page = 20
         super().__init__(logger, __service_name, **kwargs)
         self.cfn_client = super().get_client()
-        self.operation_in_prog_except_msg =  \
+        self.operation_in_progress_except_msg =  \
             'Caught exception OperationInProgressException'  \
             ' handling the exception...'
 
@@ -43,9 +45,13 @@ class StackSet(Boto3Session):
                 StackSetName=stack_set_name
             )
             return response
-        except Exception:
+        except self.cfn_client.exceptions.StackSetNotFoundException:
             pass
+        except Exception as e:
+            self.logger.log_unhandled_exception(e)
+            raise
 
+    @try_except_retry()
     def describe_stack_set_operation(self, stack_set_name, operation_id):
         try:
             response = self.cfn_client.describe_stack_set_operation(
@@ -163,13 +169,14 @@ class StackSet(Boto3Session):
                 Regions=region_list,
                 OperationPreferences={
                     'FailureTolerancePercentage': self.failed_tolerance_percent,
-                    'MaxConcurrentPercentage': self.max_concurrent_percent
+                    'MaxConcurrentPercentage': self.max_concurrent_percent,
+                    'RegionConcurrencyType': self.region_concurrency_type
                 }
             )
             return response
         except ClientError as e:
             if e.response['Error']['Code'] == 'OperationInProgressException':
-                self.logger.info(self.operation_in_prog_except_msg)
+                self.logger.info(self.operation_in_progress_except_msg)
                 return {"OperationId": "OperationInProgressException"}
             else:
                 self.logger.log_unhandled_exception(e)
@@ -201,7 +208,8 @@ class StackSet(Boto3Session):
                 ParameterOverrides=parameters,
                 OperationPreferences={
                     'FailureTolerancePercentage': self.failed_tolerance_percent,
-                    'MaxConcurrentPercentage': self.max_concurrent_percent
+                    'MaxConcurrentPercentage': self.max_concurrent_percent,
+                    'RegionConcurrencyType': self.region_concurrency_type
                 }
             )
             return response
@@ -240,21 +248,21 @@ class StackSet(Boto3Session):
                 ParameterOverrides=parameters,
                 OperationPreferences={
                     'FailureTolerancePercentage': self.failed_tolerance_percent,
-                    'MaxConcurrentPercentage': self.max_concurrent_percent
+                    'MaxConcurrentPercentage': self.max_concurrent_percent,
+                    'RegionConcurrencyType': self.region_concurrency_type
                 }
             )
             return response
         except ClientError as e:
             if e.response['Error']['Code'] == 'OperationInProgressException':
-                self.logger.info(self.operation_in_prog_except_msg)
+                self.logger.info(self.operation_in_progress_except_msg)
                 return {"OperationId": "OperationInProgressException"}
             else:
                 self.logger.log_unhandled_exception(e)
                 raise
 
     def update_stack_set(self, stack_set_name, parameter, template_url,
-                         capabilities, failed_tolerance_percent=0,
-                         max_concurrent_percent=100):
+                         capabilities):
         try:
             parameters = []
             param_dict = {}
@@ -280,14 +288,15 @@ class StackSet(Boto3Session):
                     'ADMINISTRATION_ROLE_ARN'),
                 ExecutionRoleName=os.environ.get('EXECUTION_ROLE_NAME'),
                 OperationPreferences={
-                    'FailureTolerancePercentage': failed_tolerance_percent,
-                    'MaxConcurrentPercentage': max_concurrent_percent
+                    'FailureTolerancePercentage': self.failed_tolerance_percent,
+                    'MaxConcurrentPercentage': self.max_concurrent_percent,
+                    'RegionConcurrencyType': self.region_concurrency_type
                 }
             )
             return response
         except ClientError as e:
             if e.response['Error']['Code'] == 'OperationInProgressException':
-                self.logger.info(self.operation_in_prog_except_msg)
+                self.logger.info(self.operation_in_progress_except_msg)
                 return {"OperationId": "OperationInProgressException"}
             else:
                 self.logger.log_unhandled_exception(e)
@@ -313,18 +322,20 @@ class StackSet(Boto3Session):
                 RetainStacks=retain_condition,
                 OperationPreferences={
                     'FailureTolerancePercentage': self.failed_tolerance_percent,
-                    'MaxConcurrentPercentage': self.max_concurrent_percent
+                    'MaxConcurrentPercentage': self.max_concurrent_percent,
+                    'RegionConcurrencyType': self.region_concurrency_type
                 }
             )
             return response
         except ClientError as e:
             if e.response['Error']['Code'] == 'OperationInProgressException':
-                self.logger.info(self.operation_in_prog_except_msg)
+                self.logger.info(self.operation_in_progress_except_msg)
                 return {"OperationId": "OperationInProgressException"}
             else:
                 self.logger.log_unhandled_exception(e)
                 raise
 
+    @try_except_retry()
     def describe_stack_instance(self, stack_set_name, account_id, region):
         try:
             response = self.cfn_client.describe_stack_instance(

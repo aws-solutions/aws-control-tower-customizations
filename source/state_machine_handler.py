@@ -751,8 +751,11 @@ class ServiceControlPolicy(object):
         # Check if valid json
         json.loads(policy_file_content)
         # Return the Escaped JSON text
-        return policy_file_content.replace('"', '\"').replace('\n', '\r\n') \
-                                  .replace(" ", "")
+
+        return policy_file_content\
+            .replace('"', '\"')\
+            .replace('\n', '\r\n')\
+            .replace("  ", "")
 
     def list_policies(self):
         self.logger.info("Executing: " + self.__class__.__name__ + "/"

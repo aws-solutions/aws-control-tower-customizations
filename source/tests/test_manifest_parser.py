@@ -26,6 +26,11 @@ def organizations_setup(org_client):
         "AccountEmail": "dev@mock",
         "OUName": "Dev"
     }
+    dev_map_2 = {
+        "AccountName": "Developer1-SuperSet",
+        "AccountEmail": "dev-2@mock",
+        "OUName": "Dev"
+    }
     prod_map = {
         "AccountName": "Production1",
         "AccountEmail": "prod@mock",
@@ -45,6 +50,9 @@ def organizations_setup(org_client):
     dev_account_id = org_client.create_account(
         AccountName=dev_map['AccountName'],
         Email=dev_map['AccountEmail'])["CreateAccountStatus"]["AccountId"]
+    dev_account_id_2 = org_client.create_account(
+        AccountName=dev_map_2['AccountName'],
+        Email=dev_map_2['AccountEmail'])["CreateAccountStatus"]["AccountId"]
     test_account_id = org_client.create_account(
         AccountName=test_map['AccountName'],
         Email=test_map['AccountEmail'])["CreateAccountStatus"]["AccountId"]
@@ -66,6 +74,10 @@ def organizations_setup(org_client):
     # move accounts
     org_client.move_account(
         AccountId=dev_account_id, SourceParentId=root_id,
+        DestinationParentId=dev_ou_id
+    )
+    org_client.move_account(
+        AccountId=dev_account_id_2, SourceParentId=root_id,
         DestinationParentId=dev_ou_id
     )
     org_client.move_account(
@@ -144,8 +156,17 @@ def test_version_2_manifest_stackset_sm_input(s3_setup, organizations_setup,
     # check if namespace CustomControlTower is added to the stack name
     assert sm_input_list[0]['ResourceProperties']['StackSetName'] == \
            "CustomControlTower-stackset-1"
+    # check the account list should have 2 accounts - Developer1 only (not
+    # Developer1-SuperSet
+    assert len(sm_input_list[0]['ResourceProperties']['AccountList']) == 2
     # check if export_outputs is not defined then SSMParameters is set to
     # empty dict
     assert sm_input_list[1]['ResourceProperties']['SSMParameters'] == {}
+    # check the account list should have 3 accounts - Developer1 only (not
+    # Developer1-SuperSet
+    assert len(sm_input_list[1]['ResourceProperties']['AccountList']) == 3
     # check if empty OU, account list should be empty string
     assert sm_input_list[2]['ResourceProperties']['AccountList'] == []
+    # parameters key has empty dict
+    assert sm_input_list[2]['ResourceProperties']['Parameters'] == {}
+

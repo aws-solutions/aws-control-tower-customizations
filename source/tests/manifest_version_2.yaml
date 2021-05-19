@@ -42,13 +42,6 @@ resources:
   - name: stackset-3
     resource_file: https://bucket-name.s3.amazonaws.com/key-name/version/my-initiation.template
     deploy_method: stack_set
-    parameters:
-      - parameter_key: ApplicationId
-        parameter_value: App3
-      - parameter_key: EnvironmentType
-        parameter_value: EnvType3
-      - parameter_key: EnvironmentNumber
-        parameter_value: EnvNum3
     deployment_targets:
       organizational_units:
         - EmptyOU

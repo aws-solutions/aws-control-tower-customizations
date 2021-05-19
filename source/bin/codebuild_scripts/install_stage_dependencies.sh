@@ -24,14 +24,15 @@ install_common_pip_packages () {
     pip install --upgrade PyYAML==5.3.1
     pip install --upgrade yorm==1.6.2
     pip install --upgrade jinja2==2.11.3
-    pip install --upgrade boto3==1.17.3
-    pip install --upgrade awscli==1.19.3
     pip install --upgrade requests==2.25.1
 }
 
 build_dependencies () {
     # install linux packages
     apt-get install rsync -y
+    VERSION=v4.8.0
+    BINARY=yq_linux_amd64
+    wget https://github.com/mikefarah/yq/releases/download/${VERSION}/${BINARY} -O /usr/bin/yq && chmod +x /usr/bin/yq
 
     # install pip packages
     install_common_pip_packages

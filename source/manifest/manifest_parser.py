@@ -437,7 +437,8 @@ class OrganizationsData:
             for name in name_list:
                 name_account = [value for key, value in
                                 name_to_account_map.items()
-                                if name.lower() in key.lower()]
+                                if name.lower() == key.lower()]
+                self.logger.info(f"==== name_account: {name_account}")
                 self.logger.info("%%%%%%% Name {} -  Account {}"
                                  .format(name, name_account))
                 new_account_list.extend(name_account)

@@ -48,7 +48,7 @@ mapping:
                   type: str
                   required: True
                 "parameter_value":
-                  type: str
+                  type: any
                   required: True
         "deploy_method":
           type: str

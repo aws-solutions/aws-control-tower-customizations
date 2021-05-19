@@ -79,3 +79,9 @@ def extract_string(search_str):
 def convert_list_values_to_string(_list):
     return list(map(str, _list))
 
+
+def convert_string_to_list(_string, separator=','):
+    """
+    splits the string with give separator and remove whitespaces
+    """
+    return [x.strip() for x in _string.split(separator)]

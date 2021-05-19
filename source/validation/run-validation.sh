@@ -15,7 +15,7 @@ set_failed_exit_status() {
 
 exit_shell_script() {
   echo "Exiting script with status: $EXIT_STATUS"
-  if [ $EXIT_STATUS == 0 ]
+  if [[ $EXIT_STATUS == 0 ]]
     then
       echo "INFO: Validation test(s) completed."
       exit $SUCCESS
@@ -34,6 +34,8 @@ validate_template_file() {
     set_failed_exit_status
   fi
 
+  echo "Print file encoding: $tmp_file "
+  file -i "$tmp_file"
   echo "Running cfn_nag_scan on $tmp_file"
   cfn_nag_scan --input-path "$tmp_file"
   if [ $? -ne 0 ]
@@ -67,8 +69,9 @@ fi
 echo "Manifest file is a valid YAML"
 
 # Validate manifest schema
-MANIFEST_VERSION=$(grep 'version' manifest.yaml | cut -f2 -d: | sed 's/ //g')
-if [ "$MANIFEST_VERSION" == "$VERSION_1" ]
+MANIFEST_VERSION=$(/usr/bin/yq eval '.version' manifest.yaml)
+echo "Found current manifest version: $MANIFEST_VERSION"
+if [[ "$MANIFEST_VERSION" == "$VERSION_1" ]]
 then
   echo "WARNING: You are using older version $VERSION_1 of the schema. We recommend you to update your manifest file schema. See Developer Guide for details."
   pykwalify -d manifest.yaml -s validation/manifest.schema.yaml -e validation/custom_validation.py
@@ -77,7 +80,7 @@ then
   echo "ERROR: Manifest file failed V1 schema validation"
   set_failed_exit_status
   fi
-elif [ "$MANIFEST_VERSION" == "$VERSION_2" ]
+elif [[ "$MANIFEST_VERSION" == "$VERSION_2" ]]
 then
   echo "Validating manifest with schema version: $VERSION_2"
   pykwalify -d manifest.yaml -s validation/manifest-v2.schema.yaml -e validation/custom_validation.py
@@ -179,6 +182,8 @@ for template_name in $(find . -type f | grep -E '.template$|.yaml$|.yml$|.json$'
     fi
     # delete objects in bucket
     aws s3 rm s3://"$ARTIFACT_BUCKET"/validate/templates/"$template_name"
+    echo "Print file encoding: $template_name"
+    file -i "$TEMPLATES_DIR"/"$template_name"
     echo "Running cfn_nag_scan on $template_name"
     cfn_nag_scan --input-path "$TEMPLATES_DIR"/"$template_name"
     if [ $? -ne 0 ]

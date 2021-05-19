@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1] - 2021-05-15
+### Added
+- Added option to enable concurrency to deploy StackSets operations in regions in parallel.
+- Added support for UTF-8 encoded CloudFormation templates. [#55](https://github.com/awslabs/aws-control-tower-customizations/issues/55)
+### Changed
+- Support list of SSM Parameter Store keys as CloudFormation parameter value. [#43](https://github.com/awslabs/aws-control-tower-customizations/issues/43)
+- Use environment variable for Update StackSet API [#50](https://github.com/awslabs/aws-control-tower-customizations/pull/50/files)
+- Handle account names with overlapping string [#45](https://github.com/awslabs/aws-control-tower-customizations/issues/45)
+- Handle SCP policy tag name with whitespace.
+- Update parsing logic to learn manifest version in the manifest.
+
 ## [2.0.0] - 2021-03-15
 ### Added
 - Support for new simplified manifest schema (version "2021-03-15"). This does not impact existing customers using manifest version "2020-01-01".

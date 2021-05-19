@@ -1,4 +1,8 @@
-## Customizations for AWS Control Tower Solution
+# Customizations for AWS Control Tower Solution
+
+**[🚀Solution Landing Page](https://aws.amazon.com/solutions/implementations/customizations-for-aws-control-tower/)** | **[🚧Feature request](https://github.com/awslabs/aws-control-tower-customizations/issues/new?assignees=&labels=feature-request%2C+enhancement&template=feature_request.md&title=)** | **[🐛Bug Report](https://github.com/awslabs/aws-control-tower-customizations/issues/new?assignees=&labels=bug%2C+triage&template=bug_report.md&title=)** | **[📜Documentation Improvement](https://github.com/awslabs/aws-control-tower-customizations/issues/new?assignees=&labels=document-update&template=documentation_improvements.md&title=)**
+
+## Solution Overview
 The Customizations for AWS Control Tower solution combines AWS Control Tower and other highly-available, trusted AWS services to help customers more quickly set up a secure, multi-account AWS environment based on AWS best practices. Customers can easily add customizations to their AWS Control Tower landing zone using an AWS CloudFormation template and service control policies (SCPs). Customers can deploy their custom template and policies to both individual accounts and organizational units (OUs) within their organization. Customizations for AWS Control Tower integrates with AWS Control Tower lifecycle events to ensure that resource deployments stay in sync with the customer's landing zone. For example, when a new account is created using the AWS Control Tower account factory, the solution ensures that all resources attached to the account's OUs will be automatically deployed. Before deploying this solution, customers need to have an AWS Control Tower landing zone deployed in their account.
 
 ## Getting Started 
@@ -76,9 +80,10 @@ custom_control_tower_configuration
 ```   
 ***
 
-Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with the License. A copy of the License is located at
+## Collection of operational metrics
 
-http://www.apache.org/licenses/LICENSE-2.0  
+This solution collects anonymous operational metrics to help AWS improve the quality and features of the solution. For more information, including how to disable this capability, please see the [implementation guide](https://docs.aws.amazon.com/solutions/latest/customizations-for-aws-control-tower/welcome.html).
 
-or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions and limitations under the License.
+## License
+
+See license [here](https://github.com/awslabs/aws-control-tower-customizations/blob/master/LICENSE.txt) 

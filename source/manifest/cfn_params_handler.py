@@ -20,7 +20,8 @@ from aws.services.ssm import SSM
 from aws.services.ec2 import EC2
 from aws.services.kms import KMS
 from aws.services.sts import AssumeRole
-from utils.string_manipulation import sanitize, trim_string_from_front
+from utils.string_manipulation import sanitize, trim_string_from_front, \
+    convert_string_to_list
 from utils.password_generator import random_pwd_generator
 
 
@@ -197,7 +198,7 @@ class CFNParamsHandler(object):
                                                description)
         return response
 
-    def update_params(self, params_in, account=None, region=None,
+    def update_params(self, params_in: list, account=None, region=None,
                       substitute_ssm_values=True):
         """Updates SSM parameters
         Args:
@@ -224,36 +225,66 @@ class CFNParamsHandler(object):
         for param in params_in:
             key = param.get("ParameterKey")
             value = param.get("ParameterValue")
+            separator = ','
+            value = value if separator not in value else \
+                convert_string_to_list(value, separator)
 
             if not isinstance(value, list):
-                if value.startswith('$[') and value.endswith(']'):
-                    # Apply transformations
-                    keyword = value[2:-1]
-                    # Check if supported keyword e.g. alfred_ssm_,
-                    # alfred_genaz_, alfred_getaz_, alfred_genuuid, etc.
-                    if keyword.startswith('alfred_ssm_'):
-                        value, param_flag = self._update_alfred_ssm(
-                            keyword, value, substitute_ssm_values)
-                        if param_flag is False:
-                            raise KeyError("Missing SSM parameter name for:"
-                                            " {} in the parameters JSON file."
-                                            .format(key))
-                    elif keyword.startswith('alfred_genkeypair'):
-                        value = self._update_alfred_genkeypair(
-                            param, account, region)
-                    elif keyword.startswith('alfred_genpass_'):
-                        value = self._update_alfred_genpass(
-                            keyword, param)
-                    elif keyword.startswith('alfred_genaz_'):
-                        value = self._update_alfred_genaz(
-                            keyword, param, account, region)
-                    else:
-                        value = keyword
+                value = self._process_alfred_helper(param, key, value, account,
+                                                    region,
+                                                    substitute_ssm_values)
+            else:
+                new_value_list = []
+                for nested_value in value:
+                    new_value_list.append(
+                        self._process_alfred_helper(param, key, nested_value,
+                                                    account, region,
+                                                    substitute_ssm_values))
+                value = new_value_list
 
             params_out.update({key: value})
 
         self.logger.info("params out : {}".format(params_out))
         return params_out
+
+    def _process_alfred_helper(self, param, key, value, account=None,
+                               region=None, substitute_ssm_values=True):
+        """Parses and processes alfred helpers
+           'alfred_ '
+        Args:
+            param: dict. input param
+            key: input param key
+            value: input param value (or nested value)
+            account: string
+            region: string
+            substitute_ssm_values: boolean. default to true
+
+        Return:
+            value of the processed input param value
+        """
+        if value.startswith("$[") and value.endswith("]"):
+            # Apply transformations
+            keyword = value[2:-1]
+            # Check if supported keyword e.g. alfred_ssm_,
+            # alfred_genaz_, alfred_getaz_, alfred_genuuid, etc.
+            if keyword.startswith("alfred_ssm_"):
+                value, param_flag = self._update_alfred_ssm(
+                    keyword, value, substitute_ssm_values
+                )
+                if param_flag is False:
+                    raise KeyError(
+                        "Missing SSM parameter name for:"
+                        " {} in the parameters JSON file.".format(key)
+                    )
+            elif keyword.startswith("alfred_genkeypair"):
+                value = self._update_alfred_genkeypair(param, account, region)
+            elif keyword.startswith("alfred_genpass_"):
+                value = self._update_alfred_genpass(keyword, param)
+            elif keyword.startswith("alfred_genaz_"):
+                value = self._update_alfred_genaz(keyword, param, account, region)
+            else:
+                value = keyword
+        return value
 
     def _update_alfred_ssm(self, keyword, value, substitute_ssm_values):
         """Gets the value of the SSM parameter whose name starts with
@@ -278,6 +309,7 @@ class CFNParamsHandler(object):
                 value = self._get_ssm_params(ssm_param_name)
         else:
             param_flag = False
+        self.logger.debug(f"value: {value}; param_flag:{param_flag}")
         return value, param_flag
 
     def _update_alfred_genkeypair(self, param, account, region):
