@@ -15,6 +15,8 @@
 
 # !/bin/python
 import boto3
+from botocore.config import Config
+from os import getenv
 
 
 class Boto3Session:
@@ -29,6 +31,7 @@ class Boto3Session:
                 super().__init__(logger, __service_name, **kwargs)
                 self.ec2_client = super().get_client()
     """
+
     def __init__(self, logger, service_name, **kwargs):
         """
             Parameters
@@ -49,6 +52,16 @@ class Boto3Session:
         self.credentials = kwargs.get('credentials', None)
         self.region = kwargs.get('region', None)
         self.endpoint_url = kwargs.get('endpoint_url', None)
+        self.solution_id = getenv('SOLUTION_ID', 'SO0089')
+        self.solution_version = getenv('SOLUTION_VERSION', 'undefined')
+        user_agent = f'AwsSolution/{self.solution_id}/{self.solution_version}'
+        self.boto_config = Config(
+            user_agent_extra=user_agent,
+            retries={
+                'mode': 'standard',
+                'max_attempts': 10
+            }
+        )
 
     def get_client(self):
         """Creates a boto3 low-level service client by name.
@@ -57,9 +70,12 @@ class Boto3Session:
         """
         if self.credentials is None:
             if self.endpoint_url is None:
-                return boto3.client(self.service_name, region_name=self.region)
+                return boto3.client(self.service_name,
+                                    region_name=self.region,
+                                    config=self.boto_config)
             else:
                 return boto3.client(self.service_name, region_name=self.region,
+                                    config=self.boto_config,
                                     endpoint_url=self.endpoint_url)
         else:
             if self.region is None:
@@ -69,7 +85,8 @@ class Boto3Session:
                                     aws_secret_access_key=self.credentials
                                     .get('SecretAccessKey'),
                                     aws_session_token=self.credentials
-                                    .get('SessionToken')
+                                    .get('SessionToken'),
+                                    config=self.boto_config
                                     )
             else:
                 return boto3.client(self.service_name,
@@ -79,7 +96,8 @@ class Boto3Session:
                                     aws_secret_access_key=self.credentials
                                     .get('SecretAccessKey'),
                                     aws_session_token=self.credentials
-                                    .get('SessionToken')
+                                    .get('SessionToken'),
+                                    config=self.boto_config
                                     )
 
     def get_resource(self):
@@ -90,10 +108,12 @@ class Boto3Session:
         if self.credentials is None:
             if self.endpoint_url is None:
                 return boto3.resource(self.service_name,
-                                      region_name=self.region)
+                                      region_name=self.region,
+                                      config=self.boto_config)
             else:
                 return boto3.resource(self.service_name,
                                       region_name=self.region,
+                                      config=self.boto_config,
                                       endpoint_url=self.endpoint_url)
         else:
             if self.region is None:
@@ -103,7 +123,8 @@ class Boto3Session:
                                       aws_secret_access_key=self.credentials
                                       .get('SecretAccessKey'),
                                       aws_session_token=self.credentials
-                                      .get('SessionToken')
+                                      .get('SessionToken'),
+                                      config=self.boto_config
                                       )
             else:
                 return boto3.resource(self.service_name,
@@ -113,5 +134,6 @@ class Boto3Session:
                                       aws_secret_access_key=self.credentials
                                       .get('SecretAccessKey'),
                                       aws_session_token=self.credentials
-                                      .get('SessionToken')
+                                      .get('SessionToken'),
+                                      config=self.boto_config
                                       )
