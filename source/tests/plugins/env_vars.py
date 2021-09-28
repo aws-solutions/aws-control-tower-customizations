@@ -10,6 +10,4 @@ def pytest_load_initial_conftests():
     os.environ['LOG_LEVEL'] = 'info'
     os.environ['STAGE_NAME'] = 'stackset'
     os.environ['AWS_REGION'] = 'us-east-1'
-    os.environ['CAPABILITIES'] = 'CAPABILITY_NAMED_IAM'
-
-
+    os.environ['CAPABILITIES'] = 'CAPABILITY_NAMED_IAM, CAPABILITY_AUTO_EXPAND'

@@ -35,7 +35,7 @@ def main():
             stage_name = sys.argv[6]
             os.environ['STAGE_NAME'] = stage_name
             os.environ['KMS_KEY_ALIAS_NAME'] = sys.argv[7]
-            os.environ['CAPABILITIES'] = 'CAPABILITY_NAMED_IAM'
+            os.environ['CAPABILITIES'] = 'CAPABILITY_NAMED_IAM, CAPABILITY_AUTO_EXPAND'
 
             sm_input_list = []
             if stage_name.upper() == 'SCP':
