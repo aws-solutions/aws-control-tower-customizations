@@ -19,6 +19,7 @@ import os
 from botocore.exceptions import ClientError
 from utils.retry_decorator import try_except_retry
 from aws.utils.boto3_session import Boto3Session
+import json
 
 
 class StackSet(Boto3Session):
@@ -145,7 +146,7 @@ class StackSet(Boto3Session):
                 StackSetName=stack_set_name,
                 TemplateURL=template_url,
                 Parameters=parameters,
-                Capabilities=[capabilities],
+                Capabilities=json.loads(capabilities),
                 Tags=[
                     {
                         'Key': tag_key,
@@ -283,7 +284,7 @@ class StackSet(Boto3Session):
                 StackSetName=stack_set_name,
                 TemplateURL=template_url,
                 Parameters=parameters,
-                Capabilities=[capabilities],
+                Capabilities=json.loads(capabilities),
                 AdministrationRoleARN=os.environ.get(
                     'ADMINISTRATION_ROLE_ARN'),
                 ExecutionRoleName=os.environ.get('EXECUTION_ROLE_NAME'),

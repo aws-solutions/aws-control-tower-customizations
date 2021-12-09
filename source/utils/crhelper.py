@@ -22,42 +22,41 @@ def send(event, context, response_status, response_data, physical_resource_id,
          logger, reason=None):
     """This function sends status and response data to cloudformation.
     """
-    responseUrl = event['ResponseURL']
-    logger.debug("CFN response URL: " + responseUrl)
+    response_url = event['ResponseURL']
+    logger.debug("CFN response URL: " + response_url)
 
-    responseBody = {}
-    responseBody['Status'] = response_status
+    response_body = {}
+    response_body['Status'] = response_status
     msg = 'See details in CloudWatch Log Stream: ' + context.log_stream_name
     if not reason:
-        responseBody['Reason'] = msg
+        response_body['Reason'] = msg
     else:
-        responseBody['Reason'] = str(reason)[0:255] + '... ' + msg
-    responseBody['PhysicalResourceId'] =  \
+        response_body['Reason'] = str(reason)[0:255] + '... ' + msg
+    response_body['PhysicalResourceId'] =  \
         physical_resource_id or context.log_stream_name
-    responseBody['StackId'] = event['StackId']
-    responseBody['RequestId'] = event['RequestId']
-    responseBody['LogicalResourceId'] = event['LogicalResourceId']
+    response_body['StackId'] = event['StackId']
+    response_body['RequestId'] = event['RequestId']
+    response_body['LogicalResourceId'] = event['LogicalResourceId']
     if response_data and response_data != {} and response_data != []  \
        and isinstance(response_data, dict):
-        responseBody['Data'] = response_data
+        response_body['Data'] = response_data
 
     logger.debug("<<<<<<< Response body >>>>>>>>>>")
-    logger.debug(responseBody)
-    json_responseBody = json.dumps(responseBody)
+    logger.debug(response_body)
+    json_response_body = json.dumps(response_body)
 
     headers = {
         'content-type': '',
-        'content-length': str(len(json_responseBody))
+        'content-length': str(len(json_response_body))
     }
 
     try:
-        if responseUrl == 'http://pre-signed-S3-url-for-response':
+        if response_url == 'http://pre-signed-S3-url-for-response':
             logger.info("CloudFormation returned status code:"
                         " THIS IS A TEST OUTSIDE OF CLOUDFORMATION")
-            pass
         else:
-            response = requests.put(responseUrl,
-                                    data=json_responseBody,
+            response = requests.put(response_url,
+                                    data=json_response_body,
                                     headers=headers)
             logger.info("CloudFormation returned status code: "
                         + response.reason)

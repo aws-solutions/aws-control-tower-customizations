@@ -1,3 +1,18 @@
+###############################################################################
+#  Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.    #
+#                                                                             #
+#  Licensed under the Apache License, Version 2.0 (the "License").            #
+#  You may not use this file except in compliance with the License.
+#  A copy of the License is located at                                        #
+#                                                                             #
+#      http://www.apache.org/licenses/LICENSE-2.0                             #
+#                                                                             #
+#  or in the "license" file accompanying this file. This file is distributed  #
+#  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express #
+#  or implied. See the License for the specific language governing permissions#
+#  and limitations under the License.                                         #
+###############################################################################
+
 import os
 import time
 import tempfile
@@ -85,8 +100,7 @@ class SMExecutionManager:
                 else:
                     self.logger.info("State Machine execution completed. "
                                      "Starting next execution...")
-        else:
-            self.logger.info("All State Machine executions completed.")
+        self.logger.info("All State Machine executions completed.")
         return status, failed_execution_list
 
     def run_execution_parallel_mode(self):
@@ -215,9 +229,7 @@ class SMExecutionManager:
                                                           .get('Parameters')
                                                           )
                     for key, value in params.items():
-                        if cfn_params.get(key, '') == value:
-                            pass
-                        else:
+                        if cfn_params.get(key, '') != value:
                             params_compare = False
                             break
 
@@ -238,20 +250,19 @@ class SMExecutionManager:
         response = self.stack_set. \
             list_stack_set_operations(StackSetName=stack_name,
                                       MaxResults=1)
-        if response:
-            if response.get('Summaries'):
-                for instance in response.get('Summaries'):
-                    self.logger.info("Status of last stack set "
-                                     "operation : {}"
-                                     .format(instance
-                                             .get('Status')))
-                    if instance.get('Status') != 'SUCCEEDED':
-                        self.logger.info("The last stack operation"
-                                         " did not succeed. "
-                                         "Triggering "
-                                         " Update StackSet for {}"
-                                         .format(stack_name))
-                        return False
+        if response and response.get('Summaries'):
+            for instance in response.get('Summaries'):
+                self.logger.info("Status of last stack set "
+                                 "operation : {}"
+                                 .format(instance
+                                         .get('Status')))
+                if instance.get('Status') != 'SUCCEEDED':
+                    self.logger.info("The last stack operation"
+                                     " did not succeed. "
+                                     "Triggering "
+                                     " Update StackSet for {}"
+                                     .format(stack_name))
+                    return False
         return True
 
     def compare_stack_instances(self, sm_input: dict, stack_name: str) -> bool:
@@ -327,7 +338,6 @@ class SMExecutionManager:
                 else:
                     failed_sm_execution_list.append(sm_exec_arn)
                     err_flag = True
-                    continue
 
             if err_flag:
                 return 'FAILED', failed_sm_execution_list

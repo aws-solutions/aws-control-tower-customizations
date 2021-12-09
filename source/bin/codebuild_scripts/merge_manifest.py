@@ -41,19 +41,17 @@ def update_level_one_list(existing, add_on, level_one_dct_key, decision_key):
                         flag = True
             else:
                 flag = True
-            if flag:
+            if flag and add_on_key_level_one_list not in existing.get(level_one_dct_key):
                 # to avoid duplication append check to see if value in
                 # the list already exist
-                if add_on_key_level_one_list not in \
-                        existing.get(level_one_dct_key):
-                    logger.info("(Level 1) Adding new {} > {}: {}"
-                                .format(type(add_on_key_level_one_list)
-                                        .__name__, decision_key,
-                                        add_on_key_level_one_list
-                                        .get(decision_key)))
-                    existing.get(level_one_dct_key) \
-                        .append(add_on_key_level_one_list)
-                    logger.debug(existing.get(level_one_dct_key))
+                logger.info("(Level 1) Adding new {} > {}: {}"
+                            .format(type(add_on_key_level_one_list)
+                                    .__name__, decision_key,
+                                    add_on_key_level_one_list
+                                    .get(decision_key)))
+                existing.get(level_one_dct_key) \
+                    .append(add_on_key_level_one_list)
+                logger.debug(existing.get(level_one_dct_key))
         return existing
 
 

@@ -1,0 +1,14 @@
+[
+  {
+    "ParameterKey": "ApplicationId",
+    "ParameterValue": "App1"
+  },
+  {
+    "ParameterKey": "EnvironmentType",
+    "ParameterValue": "EnvType1"
+  },
+  {
+    "ParameterKey": "EnvironmentNumber",
+    "ParameterValue": "EnvNum1"
+  }
+]

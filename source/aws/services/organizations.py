@@ -115,3 +115,10 @@ class Organizations(Boto3Session):
             self.logger.log_unhandled_exception(e)
             raise
 
+    def describe_organization(self):
+        try:
+            response = self.org_client.describe_organization()
+            return response
+        except ClientError as e:
+            self.logger.log_unhandled_exception(e)
+            raise

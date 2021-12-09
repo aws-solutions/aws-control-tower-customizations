@@ -85,3 +85,24 @@ def convert_string_to_list(_string, separator=','):
     splits the string with give separator and remove whitespaces
     """
     return [x.strip() for x in _string.split(separator)]
+
+
+def strip_list_items(array):
+    return [item.strip() for item in array]
+
+
+def remove_empty_strings(array):
+    return [x for x in array if x != '']
+
+
+def list_sanitizer(array):
+    stripped_array = strip_list_items(array)
+    return remove_empty_strings(stripped_array)
+
+
+def empty_separator_handler(delimiter, nested_ou_name):
+    if delimiter == "":
+        nested_ou_name_list = [nested_ou_name]
+    else:
+        nested_ou_name_list = nested_ou_name.split(delimiter)
+    return nested_ou_name_list

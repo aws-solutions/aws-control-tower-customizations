@@ -551,14 +551,12 @@ class CloudFormation(object):
         region_list = self.params.get('RegionList')
 
         # if AddAccountList is not empty
-        if self.event.get('AddAccountList') is not None:
-            if len(self.event.get('AddAccountList')) != 0:
-                account_list = self.event.get('AddAccountList')
+        if self.event.get('AddAccountList') is not None and len(self.event.get('AddAccountList')) != 0:
+            account_list = self.event.get('AddAccountList')
 
         # if AddRegionList is not empty
-        if self.event.get('AddRegionList') is not None:
-            if len(self.event.get('AddRegionList')) != 0:
-                region_list = self.event.get('AddRegionList')
+        if self.event.get('AddRegionList') is not None and len(self.event.get('AddRegionList')) != 0:
+            region_list = self.event.get('AddRegionList')
 
         # both AddAccountList and AddRegionList are not empty
         if self.event.get('LoopFlag') == 'yes':
@@ -683,16 +681,14 @@ class CloudFormation(object):
         region_list = self.event.get('ExistingRegionList')
 
         # if DeleteAccountList is not empty
-        if self.event.get('DeleteAccountList') is not None:
-            if len(self.event.get('DeleteAccountList')) != 0:
-                account_list = self.event.get('DeleteAccountList')
-                # full region list
-                region_list = self.event.get('ExistingRegionList')
+        if self.event.get('DeleteAccountList') is not None and len(self.event.get('DeleteAccountList')) != 0:
+            account_list = self.event.get('DeleteAccountList')
+            # full region list
+            region_list = self.event.get('ExistingRegionList')
 
         # if DeleteRegionList is not empty
-        if self.event.get('DeleteRegionList') is not None:
-            if len(self.event.get('DeleteRegionList')) != 0:
-                region_list = self.event.get('DeleteRegionList')
+        if self.event.get('DeleteRegionList') is not None and len(self.event.get('DeleteRegionList')) != 0:
+            region_list = self.event.get('DeleteRegionList')
 
         # both  DeleteAccountList and DeleteRegionList is not empty
         if self.event.get('LoopFlag') == 'yes':
@@ -875,70 +871,13 @@ class ServiceControlPolicy(object):
         self.event.update({'Status': status})
         return self.event
 
-    def _strip_list_items(self, array):
-        return [item.strip() for item in array]
-
-    def _remove_empty_strings(self, array):
-        return [x for x in array if x != '']
-
-    def _list_sanitizer(self, array):
-        stripped_array = self._strip_list_items(array)
-        return self._remove_empty_strings(stripped_array)
-
-    def _empty_separator_handler(self, delimiter, nested_ou_name):
-        if delimiter == "":
-            nested_ou_name_list = [nested_ou_name]
-        else:
-            nested_ou_name_list = nested_ou_name.split(delimiter)
-        return nested_ou_name_list
-
-    def get_ou_id(self, nested_ou_name, delimiter):
-        org = Org(self.logger)
-        response = org.list_roots()
-        root_id = response['Roots'][0].get('Id')
-        self.logger.info("Organizations Root Id: {}".format(root_id))
-        self.logger.info("Looking up the OU Id for OUName: {} with nested"
-                         " ou delimiter: {}".format(nested_ou_name,
-                                                    delimiter))
-        return self._get_ou_id(org, root_id, nested_ou_name, delimiter)
-
-    def _get_ou_id(self, org, parent_id, nested_ou_name, delimiter):
-        nested_ou_name_list = self._empty_separator_handler(
-            delimiter, nested_ou_name)
-        response = self._list_ou_for_parent(
-            org, parent_id, self._list_sanitizer(nested_ou_name_list))
-        self.logger.info(response)
-        return response
-
-    def _list_ou_for_parent(self, org, parent_id, nested_ou_name_list):
-        ou_list = org.list_organizational_units_for_parent(parent_id)
-        index = 0  # always process the first item
-        self.logger.info("Looking for existing OU: {} under parent id: {}"
-                         .format(nested_ou_name_list[index], parent_id))
-        for dictionary in ou_list:
-            if dictionary.get('Name') == nested_ou_name_list[index]:
-                self.logger.info("OU Name: {} exists under parent id: {}"
-                                 .format(dictionary.get('Name'),
-                                         parent_id))
-                # pop the first item in the list
-                nested_ou_name_list.pop(index)
-                if len(nested_ou_name_list) == 0:
-                    self.logger.info("Returning last level OU ID: {}"
-                                     .format(dictionary.get('Id')))
-                    return dictionary.get('Id')
-                else:
-                    return self._list_ou_for_parent(org,
-                                                    dictionary.get('Id'),
-                                                    nested_ou_name_list)
-
     def list_policies_for_ou(self):
         self.logger.info("Executing: " + self.__class__.__name__ + "/"
                          + inspect.stack()[0][3])
         self.logger.info(self.params)
         ou_name = self.event.get('OUName')
-        delimiter = self.params.get('OUNameDelimiter')
         policy_name = self.params.get('PolicyDocument').get('Name')
-        ou_id = self.get_ou_id(ou_name, delimiter)
+        ou_id = self.event.get('OUId')
         if ou_id is None or len(ou_id) == 0:
             raise ValueError("OU id is not found for {}".format(ou_name))
         self.event.update({'OUId': ou_id})

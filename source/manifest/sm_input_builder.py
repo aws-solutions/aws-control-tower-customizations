@@ -1,3 +1,18 @@
+###############################################################################
+#  Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.    #
+#                                                                             #
+#  Licensed under the Apache License, Version 2.0 (the "License").            #
+#  You may not use this file except in compliance with the License.
+#  A copy of the License is located at                                        #
+#                                                                             #
+#      http://www.apache.org/licenses/LICENSE-2.0                             #
+#                                                                             #
+#  or in the "license" file accompanying this file. This file is distributed  #
+#  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express #
+#  or implied. See the License for the specific language governing permissions#
+#  and limitations under the License.                                         #
+###############################################################################
+
 from abc import ABC, abstractmethod
 from os import getenv
 
@@ -54,11 +69,11 @@ class SCPResourceProperties:
 
     def __init__(self, policy_name, policy_description, policy_url, ou_list,
                  policy_list=None, account_id='', operation='',
-                 ou_name_delimiter=''):
+                 ou_name_delimiter=':'):
         self._policy_name = policy_name
         self._policy_description = policy_description
         self._policy_url = policy_url
-        self._policy_list = [] if None else policy_list
+        self._policy_list = [] if policy_list is None else policy_list
         self._account_id = account_id
         self._operation = operation
         self._ou_list = ou_list

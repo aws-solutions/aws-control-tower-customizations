@@ -1,4 +1,4 @@
-# Copyright 2012-2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License").
 # You may not use this file except in compliance with the License.
@@ -151,6 +151,10 @@ Mappings:
   AutoBuild:
     CustomControlTower:
       Flag: 'No'
+  ControlTowerBaselineConfigStackset:
+      Info:
+        Name: 'AWSControlTowerBP-BASELINE-CONFIG'
+  
 
 Conditions:
   IsPipelineApprovalStageCondition: !Equals [!Ref PipelineApprovalStage, 'Yes']
@@ -769,6 +773,7 @@ Resources:
                   - organizations:ListOrganizationalUnitsForParent
                   - organizations:ListAccountsForParent
                   - organizations:ListAccounts
+                  - organizations:DescribeOrganization
                 Resource: '*' # The APIs above only support '*' resource.
         - PolicyName: "Custom-Control-Tower-StackSet-CodeBuild-Policy-SSM"
           PolicyDocument:
@@ -867,6 +872,8 @@ Resources:
                     Value: %VERSION%
                   - Name: METRICS_URL
                     Value: !FindInMap [Solution, Metrics, MetricsURL]
+                  - Name: CONTROL_TOWER_BASELINE_CONFIG_STACKSET
+                    Value: !FindInMap [ControlTowerBaselineConfigStackset, Info, Name]
           Artifacts:
               Name: !Sub ${CustomControlTowerPipelineArtifactS3Bucket}-Built
               Type: CODEPIPELINE
@@ -1275,11 +1282,6 @@ Resources:
 
   StateMachineRole:
     Type: "AWS::IAM::Role"
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W11
-            reason: "Allow Resource * for AWS Lambda Functions in the account. State Machine execution fails otherwise."
     Properties:
       AssumeRolePolicyDocument:
         Version: "2012-10-17"

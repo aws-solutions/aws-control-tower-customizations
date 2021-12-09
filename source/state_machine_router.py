@@ -132,9 +132,15 @@ def service_control_policy(event, function_name):
         event.update({'Index': index})
         event.update({'Step': step})
         event.update({'Continue': _continue})
-        if ou_map:
-            event.update({'OUName': ou_map[0]})
+        if ou_map: # ou list example: [['ouname1','ouid1],'Attach']
+            logger.info("[state_machine_router.service_control_policy] ou_map:  {}".format(ou_map))
+            logger.debug("[state_machine_router.service_control_policy] OUName: {}; OUId: {}; Operation: {}"\
+                        .format(ou_map[0][0], ou_map[0][1], ou_map[1]))
+
+            event.update({'OUName': ou_map[0][0]})
+            event.update({'OUId': ou_map[0][1]})
             event.update({'Operation': ou_map[1]})
+
         return event
 
     else:

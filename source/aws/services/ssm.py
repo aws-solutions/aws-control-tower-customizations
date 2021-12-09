@@ -82,6 +82,8 @@ class SSM(Boto3Session):
             )
             return response.get('Parameter', {}).get('Value')
         except ClientError as e:
+            if e.response['Error']['Code'] == 'ParameterNotFound':
+                self.logger.log_unhandled_exception('The SSM Parameter {} was not found'.format(name))
             self.logger.log_unhandled_exception(e)
             raise
 
