@@ -78,3 +78,20 @@ def test_convert_string_to_list_custom_separator():
     assert isinstance(list_1, list)
     assert list_1[0] == 'a'
     assert list_1[1] == 'b'
+
+def test_strip_list_items():
+    arr = [" a","  b", "c "]
+    assert string_manipulation.strip_list_items(arr) == ['a', 'b', 'c']
+    
+def test_remove_empty_strings():
+    arr = ["a","b", "", "c"]
+    assert string_manipulation.remove_empty_strings(arr) == ['a', 'b', 'c']   
+
+def test_list_sanitizer():
+    arr = ["  a","b  ", "", "   c"]
+    assert string_manipulation.list_sanitizer(arr) == ['a', 'b', 'c']  
+
+def test_empty_separator_handler():
+    delimiter = ":"
+    nested_ou_name_list = "testou1:testou2:testou3"
+    assert string_manipulation.empty_separator_handler(delimiter, nested_ou_name_list) == ['testou1', 'testou2', 'testou3']  

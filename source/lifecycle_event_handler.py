@@ -47,9 +47,8 @@ def invoke_code_pipeline(event):
         # The filtering of specific control tower lifecycle events is done
         # by a CWE rule, which is configured to deliver only
         # the matching events to the SQS queue.
-        if record['body'] is not None:
-            if record['body'].find('"source":"aws.controltower"') >= 0:
-                msg_count += 1
+        if record['body'] is not None and record['body'].find('"source":"aws.controltower"') >= 0:
+            msg_count += 1
 
     if msg_count > 0:
         logger.info(str(msg_count) +

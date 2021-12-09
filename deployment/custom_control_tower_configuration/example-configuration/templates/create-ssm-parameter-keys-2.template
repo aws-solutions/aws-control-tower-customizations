@@ -1,0 +1,42 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Dev Template to test overrideparams
+Parameters:
+  ApplicationId:
+    Description: APP ID for the account
+    Type: String
+    Default: 'APP00000'
+  EnvironmentType:
+    Description: EnvironmentType for the account
+    Type: String
+    Default: 'Prod'
+  EnvironmentNumber:
+    Description: EnvironmentNumber for the account
+    Type: String
+    Default: '00'
+Resources:
+  ApplicationIdParam:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Description: APP ID for the account
+      Name: /LG/baseline/ApplicationId
+      Type: String
+      Value: !Ref ApplicationId
+  EnvironmentTypeParam:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Description: EnvironmentType for the account
+      Name: /LG/baseline/EnvironmentType
+      Type: String
+      Value: !Ref EnvironmentType
+  EnvironmentNumberParam:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Description: EnvironmentNumber for the account
+      Name: /LG/baseline/EnvironmentNumber
+      Type: String
+      Value: !Ref EnvironmentNumber
+Outputs:
+  ApplicationId:
+    Description: App ID
+    Value: !Ref ApplicationId

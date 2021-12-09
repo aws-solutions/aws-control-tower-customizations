@@ -19,12 +19,15 @@ import boto3
 import json
 from botocore.exceptions import ClientError
 from utils.string_manipulation import sanitize
+from aws.utils.boto3_session import Boto3Session
 
 
-class StateMachine(object):
-    def __init__(self, logger):
+class StateMachine(Boto3Session):
+    def __init__(self, logger, **kwargs):
         self.logger = logger
-        self.state_machine_client = boto3.client('stepfunctions')
+        __service_name = 'stepfunctions'
+        super().__init__(logger, __service_name, **kwargs)
+        self.state_machine_client = super().get_client()
 
     def start_execution(self, state_machine_arn, input, name):
         try:

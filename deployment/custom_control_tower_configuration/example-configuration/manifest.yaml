@@ -1,0 +1,48 @@
+---
+#Default region for deploying Custom Control Tower: Code Pipeline, Step functions, Lambda, SSM parameters, and StackSets
+region: <HOME_REGION_NAME>
+version: 2021-03-15
+
+# Control Tower Custom CloudFormation Resources
+resources:
+  - name: stackset-1
+    resource_file: templates/create-ssm-parameter-keys-1.template
+    parameter_file: parameters/create-ssm-parameter-keys-1.json
+    deploy_method: stack_set
+    deployment_targets:
+      accounts: # :type: list
+        - <ACCOUNT_NAME> # and/or
+        - <ACCOUNT_NUMBER>
+    export_outputs:
+      - name: /org/member/test-ssm/app-id
+        value: $[output_ApplicationId]
+    regions:
+      - <REGION_NAME>
+
+  - name: stackset-2
+    resource_file: s3://<BUCKET-NAME>/<KEY-NAME>/create-ssm-parameter-keys-2.template # S3 bucket must be in the <HOME_REGION_NAME>
+    parameters:
+      - parameter_key: ApplicationId
+        parameter_value: App2
+      - parameter_key: EnvironmentType
+        parameter_value: EnvType2
+      - parameter_key: EnvironmentNumber
+        parameter_value: EnvNum2
+    deploy_method: stack_set
+    deployment_targets:
+      accounts:
+        - <ACCOUNT_NAME> # and/or
+        - <ACCOUNT_NUMBER>
+      organizational_units:
+        - <OU_NAME>
+    regions: # :type: list
+      - <REGION_NAME>
+
+  - name: test-preventive-guardrails
+    description: To prevent from deleting or disabling resources in member accounts
+    resource_file: policies/preventive-guardrails.json
+    deploy_method: scp
+    #Apply to the following OU(s)
+    deployment_targets: # accounts property is not supported for SCPs
+      organizational_units:
+        - <OU_NAME>

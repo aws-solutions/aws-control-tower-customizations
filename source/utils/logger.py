@@ -23,7 +23,6 @@ class Logger(object):
     def __init__(self, loglevel='warning'):
         """Initializes logging"""
         self.config(loglevel=loglevel)
-        return
 
     def config(self, loglevel='warning'):
         loglevel = logging.getLevelName(loglevel.upper())

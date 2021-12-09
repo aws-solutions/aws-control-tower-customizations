@@ -1,0 +1,36 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "GuardPutAccountPublicAccessBlock",
+      "Effect": "Deny",
+      "Action": "s3:PutAccountPublicAccessBlock",
+      "Resource": "arn:aws:s3:::*"
+    },
+    {
+      "Sid": "GuardEMRPutBlockPublicAccess",
+      "Effect": "Deny",
+      "Action": "elasticmapreduce:PutBlockPublicAccessConfiguration",
+      "Resource": "*"
+    },
+    {
+      "Sid": "GuardGlacierDeletion",
+      "Effect": "Deny",
+      "Action": [
+        "glacier:DeleteArchive",
+        "glacier:DeleteVault"
+      ],
+      "Resource": "arn:aws:glacier:*:*:vaults/*"
+    },
+    {
+      "Sid": "GuardKMSActions",
+      "Effect": "Deny",
+      "Action": [
+        "kms:DeleteAlias",
+        "kms:DeleteImportedKeyMaterial",
+        "kms:ScheduleKeyDeletion"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

@@ -90,42 +90,40 @@ def file_matcher(master_data, add_on_data, master_key='master',
 
 def update_level_1_dict(master, add_on, level_1_key):
     for key1, value1 in add_on.items():
-        if isinstance(value1, dict):
+        if isinstance(value1, dict) and key1 == level_1_key:
             # Check if primary key matches
-            if key1 == level_1_key:
-                logger.info("Level 1 keys matched ADDON {} == {}".format(
-                    key1, level_1_key))
-                # Iterate through the 2nd level dicts in the value
-                for key2, value2 in value1.items():
-                    logger.info("----------------------------------")
-                    # Match k with master dict keys - add if not present
-                    for k1, v1 in master.items():
-                        if isinstance(v1, dict):
-                            if k1 == level_1_key:
-                                logger.info("Level 1 keys matched MASTER "
-                                            "{} == {}".format(k1, level_1_key))
+            logger.info("Level 1 keys matched ADDON {} == {}".format(
+                key1, level_1_key))
+            # Iterate through the 2nd level dicts in the value
+            for key2, value2 in value1.items():
+                logger.info("----------------------------------")
+                # Match k with master dict keys - add if not present
+                for k1, v1 in master.items():
+                    if isinstance(v1, dict) and k1 == level_1_key:
+                        logger.info("Level 1 keys matched MASTER "
+                                    "{} == {}".format(k1, level_1_key))
+                        flag = False
+                        # Iterate through the 2nd level dicts in
+                        # the value
+                        for k2, v2 in v1.items():
+                            logger.info("Is {} == {}".format(key2, k2))
+                            if key2 == k2:
+                                logger.info("Found matching keys")
                                 flag = False
-                                # Iterate through the 2nd level dicts in
-                                # the value
-                                for k2, v2 in v1.items():
-                                    logger.info("Is {} == {}".format(key2, k2))
-                                    if key2 == k2:
-                                        logger.info("Found matching keys")
-                                        flag = False
-                                        logger.info("Setting flag value to {}"
-                                                    .format(flag))
-                                        break
-                                    else:
-                                        flag = True
-                                        logger.info(
-                                            "Add-on key not found in existing"
-                                            " dict, setting flag value to {}"
-                                            " to update dict.".format(flag))
-                                if flag:
-                                    logger.info('Adding key {}'.format(key2))
-                                    d2 = {key2: value2}
-                                    v1.update(d2)
-                                    logger.debug(master)
+                                logger.info("Setting flag value to {}"
+                                            .format(flag))
+                                break
+                            else:
+                                flag = True
+                                logger.info(
+                                    "Add-on key not found in existing"
+                                    " dict, setting flag value to {}"
+                                    " to update dict.".format(flag))
+                        if flag:
+                            logger.info('Adding key {}'.format(key2))
+                            d2 = {key2: value2}
+                            v1.update(d2)
+                            logger.debug(master)
     return master
 
 
@@ -175,12 +173,11 @@ def update_parameters(master, add_on, decision_key='ParameterKey'):
                     else:
                         flag = True
                         logger.info("Setting flag value to {}".format(flag))
-                if flag:
+                if flag and item not in m_list:
                     # avoid appending same parameter in the parameter list
-                    if item not in m_list:
-                        m_list.append(item)
-                        logger.info("Printing updated parameter file.")
-                        logger.info(m_list)
+                    m_list.append(item)
+                    logger.info("Printing updated parameter file.")
+                    logger.info(m_list)
         return m_list
 
 

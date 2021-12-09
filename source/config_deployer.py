@@ -50,7 +50,7 @@ def unzip_function(zip_file_name, function_path, output_path):
 
 def find_replace(function_path, file_name, destination_file, parameters):
     j2loader = FileSystemLoader(function_path)
-    j2env = Environment(loader=j2loader)  # Compliant
+    j2env = Environment(loader=j2loader, autoescape=True)  # Compliant
     j2template = j2env.get_template(file_name)
     dictionary = {}
     for key, value in parameters.items():
@@ -95,15 +95,14 @@ def find_alias(alias_name):
                 logger.info('Found key attached with existing key id.')
                 key_id = alias.get('TargetKeyId')
                 return key_id
+        if not truncated_flag:
+            logger.info('Alias not found in the list')
+            alias_not_found = False
         else:
-            if not truncated_flag:
-                logger.info('Alias not found in the list')
-                alias_not_found = False
-            else:
-                logger.info('Could not find alias in truncated response,'
-                            ' trying again...')
-                marker = response_list_alias.get('NextMarker')
-                logger.info('Trying again with NextMarker: {}'.format(marker))
+            logger.info('Could not find alias in truncated response,'
+                        ' trying again...')
+            marker = response_list_alias.get('NextMarker')
+            logger.info('Trying again with NextMarker: {}'.format(marker))
 
 
 def create_cmk_with_alias(alias_name, event_policy):
@@ -280,7 +279,6 @@ def delete(event, context):
     """
     Delete capability is not required for this function.
     """
-    return
 
 
 def lambda_handler(event, context):

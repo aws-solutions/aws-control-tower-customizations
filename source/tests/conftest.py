@@ -1,7 +1,7 @@
 import pytest
 import boto3
 from os import environ
-from moto import mock_s3, mock_organizations, mock_ssm
+from moto import mock_s3, mock_organizations, mock_ssm, mock_cloudformation
 
 
 @pytest.fixture(scope='module')

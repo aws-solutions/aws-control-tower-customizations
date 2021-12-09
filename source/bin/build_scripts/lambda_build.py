@@ -38,11 +38,11 @@ def zip_function(zip_file_name, function_path, output_path, exclude_list):
     for folder, subs, files in os.walk('.'):
         for filename in files:
             fpath = os.path.join(folder, filename)
-            if fpath.endswith('.py') or fpath.endswith('.sh') or '.so'  \
-                    in fpath or 'cacert.pem' in fpath or 'schema' in fpath:
-                if not any(x in fpath for x in exclude_list):
-                    print(fpath)
-                    zip_file.write(fpath)
+            if fpath.endswith('.py') or fpath.endswith('.sh') or '.so' \
+                    in fpath or 'cacert.pem' in fpath or 'schema' in fpath and \
+                    not any(x in fpath for x in exclude_list):
+                print(fpath)
+                zip_file.write(fpath)
     zip_file.close()
     os.chdir(orig_path)
 

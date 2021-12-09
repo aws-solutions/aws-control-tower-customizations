@@ -1,3 +1,18 @@
+###############################################################################
+#  Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.    #
+#                                                                             #
+#  Licensed under the Apache License, Version 2.0 (the "License").            #
+#  You may not use this file except in compliance with the License.
+#  A copy of the License is located at                                        #
+#                                                                             #
+#      http://www.apache.org/licenses/LICENSE-2.0                             #
+#                                                                             #
+#  or in the "license" file accompanying this file. This file is distributed  #
+#  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express #
+#  or implied. See the License for the specific language governing permissions#
+#  and limitations under the License.                                         #
+###############################################################################
+
 import os
 import sys
 from utils.logger import Logger
@@ -35,7 +50,7 @@ def main():
             stage_name = sys.argv[6]
             os.environ['STAGE_NAME'] = stage_name
             os.environ['KMS_KEY_ALIAS_NAME'] = sys.argv[7]
-            os.environ['CAPABILITIES'] = 'CAPABILITY_NAMED_IAM'
+            os.environ['CAPABILITIES'] = '["CAPABILITY_NAMED_IAM","CAPABILITY_AUTO_EXPAND"]'
 
             sm_input_list = []
             if stage_name.upper() == 'SCP':
@@ -43,7 +58,7 @@ def main():
                 os.environ['EXECUTION_MODE'] = 'parallel'
                 sm_input_list = get_scp_inputs()
                 logger.info("SCP sm_input_list:")
-                logger.debug(sm_input_list)
+                logger.info(sm_input_list)
 
             elif stage_name.upper() == 'STACKSET':
                 os.environ['EXECUTION_MODE'] = 'sequential'
