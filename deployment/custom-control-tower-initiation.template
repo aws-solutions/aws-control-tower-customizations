@@ -31,6 +31,9 @@ Parameters:
     Description: Which AWS CodePipeline source provider do you want to select?
     AllowedValues:
       - 'Amazon S3'
+      - 'GitHub'
+      - 'GitHubEnterpriseServer'
+      - 'Bitbucket'
       - 'AWS CodeCommit'
     Default: 'Amazon S3'
     Type: String
@@ -43,6 +46,16 @@ Parameters:
 
   CodeCommitBranchName:
     Description: Name of the branch in CodeCommit repository that contains custom Control Tower configuration.
+    Default: main
+    Type: String
+
+    GitRepositoryName:
+    Description: Name of the Git repository that contains custom Control Tower configuration. The suffix .git is prohibited.
+    Default: some-user/my-repo
+    Type: String
+
+  GitBranchName:
+    Description: Name of the branch in Git repository that contains custom Control Tower configuration.
     Default: main
     Type: String
 
@@ -82,9 +95,11 @@ Metadata:
       - PipelineApprovalEmail
       - CodePipelineSource
     - Label:
-        default: AWS CodeCommit Setup (Applicable if 'AWS CodeCommit' was selected as the CodePipeline Source)
+        default: Source Setup (Applicable if not selecting 'Amazon S3' as the CodePipeline Source)
       Parameters:
       - ExistingRepository
+      - GitRepositoryName
+      - GitBranchName
       - CodeCommitRepositoryName
       - CodeCommitBranchName
     - Label:
@@ -103,6 +118,10 @@ Metadata:
         default: AWS CodePipeline Source
       ExistingRepository:
         default: Existing CodeCommit Repository?
+        GitRepositoryName:
+        default: Git Repository Name
+      GitBranchName:
+        default: Git Branch Name
       CodeCommitRepositoryName:
         default: CodeCommit Repository Name
       CodeCommitBranchName:
@@ -160,6 +179,7 @@ Conditions:
   IsPipelineApprovalStageCondition: !Equals [!Ref PipelineApprovalStage, 'Yes']
   IsBuildCustomControlTowerCondition: !Equals [!FindInMap [AutoBuild, CustomControlTower, Flag], 'Yes']
   IsCodeCommitPipelineSource: !Equals [!Ref CodePipelineSource, 'AWS CodeCommit']
+  IsGit: !Or [!Equals [!Ref CodePipelineSource, 'GitHub'], !Equals [!Ref CodePipelineSource, 'GitHubEnterpriseServer'], !Equals [!Ref CodePipelineSource, 'Bitbucket']]
   IsExistingRepository: !Equals [!Ref ExistingRepository, 'Yes']
   IsNewCodeCommitRepository: !And [!Not [!Condition IsExistingRepository], !Condition IsCodeCommitPipelineSource]
 
@@ -388,6 +408,20 @@ Resources:
                     - "sns:Publish"
                   Resource: !Ref PipelineApprovalTopic
                 - !Ref AWS::NoValue
+              - !If
+                - IsGit
+                - Effect: "Allow"
+                  Action:
+                    - "codestar-connections:UseConnection"
+                  Resource: !Ref GitConnection
+                - !Ref AWS::NoValue
+
+  GitConnection:
+    Type: AWS::CodeStarConnections::Connection
+    Condition: IsGit
+    Properties:
+      ConnectionName: Git-Customizations-Connection
+      ProviderType: !Ref CodePipelineSource
 
   CustomControlTowerCodePipeline:
     Type: AWS::CodePipeline::Pipeline
@@ -408,6 +442,12 @@ Resources:
                     Owner: AWS
                     Version: "1"
                     Provider: CodeCommit
+                  - !If
+                    - IsGit
+                    - Category: Source
+                      Owner: AWS
+                      Version: "1"
+                      Provider: CodeStarSourceConnection
                   - Category: Source
                     Owner: AWS
                     Version: "1"
@@ -419,6 +459,13 @@ Resources:
                   - IsCodeCommitPipelineSource
                   - RepositoryName: !Ref CodeCommitRepositoryName
                     BranchName: !Ref CodeCommitBranchName
+                  - !If
+                    - IsGit
+                    - ConnectionArn: !Ref GitConnection
+                      FullRepositoryId: !Ref GitRepositoryName
+                      BranchName: !Ref GitBranchName
+                      DetectChanges: true
+                      OutputArtifactFormat: "CODEBUILD_CLONE_REF"
                   - S3Bucket: !Ref CustomControlTowerPipelineS3Bucket
                     S3ObjectKey: !FindInMap [BucketConfiguration, CustomControlTowerPipelineS3TriggerKey, Name]
               RunOrder: 1
@@ -531,6 +578,13 @@ Resources:
                 Action:
                   - ssm:DescribeParameters
                 Resource: '*' # The APIs above only support '*' resource.
+              - !If
+                - IsGit
+                - Effect: "Allow"
+                  Action:
+                    - "codestar-connections:UseConnection"
+                  Resource: !Ref GitConnection
+                - !Ref AWS::NoValue
 
   CustomControlTowerCodeBuild:
       Type: AWS::CodeBuild::Project
