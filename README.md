@@ -26,8 +26,8 @@ _Note:_ You would need to create one global bucket and one regional bucket. The 
  
 * Now build the distributable
 ``` 
-chmod +x ./build-s3-dist.sh
-./build-s3-dist.sh $DIST_OUTPUT_BUCKET_PREFIX $TEMPLATE_OUTPUT_BUCKET $SOLUTION_NAME $VERSION
+chmod +x ./deployment/build-s3-dist.sh
+./deployment/build-s3-dist.sh $DIST_OUTPUT_BUCKET_PREFIX $TEMPLATE_OUTPUT_BUCKET $SOLUTION_NAME $VERSION
 ``` 
  
 * Upload the distributable to an Amazon S3 bucket in your account.
