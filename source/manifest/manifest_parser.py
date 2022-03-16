@@ -376,7 +376,10 @@ class BuildStateMachineInput:
         ssm_parameters = self._create_ssm_input_map(resource.export_outputs)
 
         # generate state machine input list
-        stack_set_name = "CustomControlTower-{}".format(resource.name)
+        if resource.stackset_name:
+            stack_set_name = "CustomControlTower-{}".format(resource.stackset_name)
+        else:
+            stack_set_name = "CustomControlTower-{}".format(resource.name)
         resource_properties = StackSetResourceProperties(stack_set_name,
                                                          template_url,
                                                          sm_params,

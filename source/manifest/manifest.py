@@ -129,6 +129,7 @@ class PolicyList(List):
 
 
 @yorm.attr(name=String)
+@yorm.attr(stackset_name=String)
 @yorm.attr(resource_file=String)
 @yorm.attr(parameter_file=String)
 @yorm.attr(deploy_method=String)
@@ -138,9 +139,11 @@ class PolicyList(List):
 @yorm.attr(parameters=Parameters)
 class ResourceProps(AttributeDictionary):
     def __init__(self, name, resource_file, parameters, parameter_file,
-                 deploy_method, deployment_targets, export_outputs, regions):
+                 deploy_method, deployment_targets, export_outputs, regions,
+                 stackset_name=None):
         super().__init__()
         self.name = name
+        self.stackset_name = stackset_name
         self.resource_file = resource_file
         self.parameter_file = parameter_file
         self.parameters = parameters
