@@ -14,8 +14,8 @@
 ###############################################################################
 
 import pytest
-from state_machine_handler import CloudFormation
-from utils.logger import Logger
+from cfct.state_machine_handler import CloudFormation
+from cfct.utils.logger import Logger
 logger = Logger('info')
 
 string1 = 'xx'
@@ -25,40 +25,40 @@ list2 = ['bb', 'dd']
 event = {}
 cf = CloudFormation(event, logger)
 
-
+@pytest.mark.unit
 def test_add_list_type():
     assert isinstance(cf._add_list(list1, list2), list)
 
-
+@pytest.mark.unit
 def test_delete_list_type():
     assert isinstance(cf._delete_list(list1, list2), list)
 
-
+@pytest.mark.unit
 def test_add_list_string_fail():
     with pytest.raises(ValueError, match=r"Both variables must be list.*"):
         cf._add_list(list1, string1)
 
-
+@pytest.mark.unit
 def test_add_string_list_fail():
     with pytest.raises(ValueError, match=r"Both variables must be list.*"):
         cf._add_list(string1, list1)
 
-
+@pytest.mark.unit
 def test_add_strings_fail():
     with pytest.raises(ValueError, match=r"Both variables must be list.*"):
         cf._add_list(string1, string2)
 
-
+@pytest.mark.unit
 def test_del_list_string_fail():
     with pytest.raises(ValueError, match=r"Both variables must be list.*"):
         cf._delete_list(list1, string1)
 
-
+@pytest.mark.unit
 def test_del_string_list_fail():
     with pytest.raises(ValueError, match=r"Both variables must be list.*"):
         cf._delete_list(string1, list1)
 
-
+@pytest.mark.unit
 def test_del_strings_fail():
     with pytest.raises(ValueError, match=r"Both variables must be list.*"):
         cf._delete_list(string1, string2)

@@ -13,14 +13,15 @@
 #  governing permissions  and limitations under the License.                 #
 ##############################################################################
 from moto import mock_ssm
-from utils.logger import Logger
-from manifest.cfn_params_handler import CFNParamsHandler
-from aws.services.ssm import SSM
+from cfct.utils.logger import Logger
+from cfct.manifest.cfn_params_handler import CFNParamsHandler
+from cfct.aws.services.ssm import SSM
+import pytest
 
 log_level = 'info'
 logger = Logger(loglevel=log_level)
 
-
+@pytest.mark.unit
 def test_update_alfred_ssm():
     keyword_ssm = 'alfred_ssm_not_exist_alfred_ssm'
     value_ssm = 'parameter_store_value'
@@ -29,7 +30,7 @@ def test_update_alfred_ssm():
         keyword_ssm, value_ssm, False)
     assert param_flag is True
 
-
+@pytest.mark.unit
 @mock_ssm
 def test_update_params():
     logger.info("-- Put new parameter keys in mock environment")

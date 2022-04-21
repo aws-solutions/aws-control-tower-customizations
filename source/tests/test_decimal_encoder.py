@@ -12,11 +12,12 @@
 #  KIND, express or implied. See the License for the specific language       #
 #  governing permissions  and limitations under the License.                 #
 ##############################################################################
-from utils.decimal_encoder import DecimalEncoder
+from cfct.utils.decimal_encoder import DecimalEncoder
 import json
 import decimal
+import pytest
 
-
+@pytest.mark.unit
 def test_decimal_encoder():
     assert json.dumps(
         {'x': decimal.Decimal('5.5')}, cls=DecimalEncoder) == json.dumps(

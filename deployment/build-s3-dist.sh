@@ -1,10 +1,9 @@
 #!/bin/bash
 # This assumes all of the OS-level configuration has been completed and git repo has already been cloned         
-#                                                                                                                
-# This script should be run from the repo's deployment directory                                                 
-# cd deployment                                                                                                  
-# ./build-s3-dist.sh source-bucket-base-name template-bucket-base-name trademarked-solution-name version-code                           
-#                                                                                                                
+#
+# Usage: This script should be executed from the package root directory
+# ./deployment/build-s3-dist.sh source-bucket-base-name template-bucket-base-name trademarked-solution-name version-code
+#
 # Parameters:                                                                                                   
 #  - source-bucket-base-name: Name for the S3 bucket location where the template will source the Lambda          
 #    code from. The template will append '-[region_name]' to this bucket name.                                   
@@ -15,12 +14,15 @@
 #  
 # - trademarked-solution-name: name of the solution for consistency                                             
 #                                                                                                                
-#  - version-code: version of the package                                                                          
+#  - version-code: version of the package
+
+# Hard exit on failure
+set -e
 
 # Check to see if input has been provided:                                                                       
-if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]; then
+if [ $# != 4 ]; then
     echo "Please provide the base source bucket name, template-bucket, trademark approved solution name, and version"
-    echo "For example: ./build-s3-dist.sh solutions template-bucket trademarked-solution-name v1.0.0"
+    echo "For example: ./deployment/build-s3-dist.sh solutions template-bucket trademarked-solution-name v1.0.0"
     exit 1
 fi
 
@@ -47,15 +49,7 @@ VERSION_NUMBER=$4
 
 # Create zip file for AWS Lambda functions
 echo -e "\n Creating all lambda functions for Custom Control Tower Solution"
-python source/bin/build_scripts/lambda_build.py state_machine_lambda deployment_lambda build_scripts lifecycle_event_handler state_machine_trigger
-#python source/bin/build_scripts/lambda_build.py state_machine_lambda deployment_lambda build_scripts lifecycle_event_handler
-
-echo -e "\n Cleaning up the tests folder from the lambda zip files"
-zip -d "$build_dist_dir"/custom-control-tower-config-deployer.zip tests/*
-zip -d "$build_dist_dir"/custom-control-tower-state-machine.zip tests/*
-zip -d "$build_dist_dir"/custom-control-tower-scripts.zip tests/*
-zip -d "$build_dist_dir"/custom-control-tower-lifecycle-event-handler.zip tests/*
-zip -d "$build_dist_dir"/custom-control-tower-state-machine-trigger.zip tests/*
+python3 deployment/lambda_build.py state_machine_lambda deployment_lambda build_scripts lifecycle_event_handler state_machine_trigger
 
 # Move custom-control-tower-initiation.template to global-s3-assets
 echo "cp -f deployment/custom-control-tower-initiation.template $template_dist_dir"

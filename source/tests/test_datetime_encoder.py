@@ -12,11 +12,12 @@
 #  KIND, express or implied. See the License for the specific language       #
 #  governing permissions  and limitations under the License.                 #
 ##############################################################################
-from utils.datetime_encoder import DateTimeEncoder
+from cfct.utils.datetime_encoder import DateTimeEncoder
 from datetime import datetime, date
 import json
+import pytest
 
-
+@pytest.mark.unit
 def test_datetime_encoder():
     datetime_str = '02/17/20 23:38:26'
     datetime_object = datetime.strptime(datetime_str, '%m/%d/%y %H:%M:%S')

@@ -13,9 +13,11 @@
 #  and limitations under the License.                                         #
 ###############################################################################
 
-from manifest.sm_input_builder import InputBuilder, SCPResourceProperties, \
+from cfct.manifest.sm_input_builder import InputBuilder, SCPResourceProperties, \
     StackSetResourceProperties
-from utils.logger import Logger
+from cfct.utils.logger import Logger
+import pytest
+
 logger = Logger('info')
 
 # declare SCP state machine input variables
@@ -70,37 +72,37 @@ def build_stack_set_input():
     ss_input = InputBuilder(resource_properties.get_stack_set_input_map())
     return ss_input.input_map()
 
-
+@pytest.mark.unit
 def test_scp_input_type():
     # check if returned input is of type dict
     scp_input = build_scp_input()
     assert isinstance(scp_input, dict)
 
-
+@pytest.mark.unit
 def test_scp_resource_property_type():
     # check if resource property is not None
     scp_input = build_scp_input()
     assert isinstance(scp_input.get("ResourceProperties"), dict)
 
-
+@pytest.mark.unit
 def test_request_type_value():
     # check the default request type is create
     scp_input = build_scp_input()
     assert scp_input.get("RequestType") == "Create"
 
-
+@pytest.mark.unit
 def test_stack_set_input_type():
     # check if returned input is of type dict
     stack_set_input = build_stack_set_input()
     assert isinstance(stack_set_input, dict)
 
-
+@pytest.mark.unit
 def test_ss_resource_property_type():
     # check if resource property is not None
     stack_set_input = build_stack_set_input()
     assert isinstance(stack_set_input.get("ResourceProperties"), dict)
 
-
+@pytest.mark.unit
 def test_ss_request_type_value():
     # check the default request type is create
     stack_set_input = build_stack_set_input()

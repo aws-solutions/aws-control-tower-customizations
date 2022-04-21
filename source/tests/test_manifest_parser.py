@@ -16,10 +16,11 @@
 import os
 import pytest
 import mock
-from utils.logger import Logger
-import manifest.manifest_parser as parse
+from cfct.utils.logger import Logger
+import cfct.manifest.manifest_parser as parse
+import pytest
 
-TESTS_DIR = './tests/'
+TESTS_DIR = './source/tests/'
 
 logger = Logger(loglevel='info')
 
@@ -111,7 +112,7 @@ def organizations_setup(org_client):
 
     yield
 
-
+@pytest.mark.unit
 def test_version_1_manifest_scp_sm_input(s3_setup, organizations_setup, ssm_client):
     manifest_name = 'manifest_version_1.yaml'
     file_path = TESTS_DIR + manifest_name
@@ -128,7 +129,7 @@ def test_version_1_manifest_scp_sm_input(s3_setup, organizations_setup, ssm_clie
     assert sm_input_list[1]['ResourceProperties']['PolicyDocument'][
                'Name'] == "test-guardrails-2"
 
-
+@pytest.mark.unit
 def test_version_2_manifest_scp_sm_input(s3_setup, organizations_setup, ssm_client):
     manifest_name = 'manifest_version_2.yaml'
     file_path = TESTS_DIR + manifest_name
@@ -145,11 +146,11 @@ def test_version_2_manifest_scp_sm_input(s3_setup, organizations_setup, ssm_clie
     assert sm_input_list[1]['ResourceProperties']['PolicyDocument'][
                'Name'] == "test-guardrails-2"
 
-
+@pytest.mark.unit
 def test_version_1_manifest_stackset_sm_input(s3_setup, organizations_setup,
                                               ssm_client):
     # mock API call and assign return value
-    with mock.patch("manifest.manifest_parser.OrganizationsData.get_accounts_in_ct_baseline_config_stack_set", mock.MagicMock(return_value=[list(os.environ['ACCOUNT_LIST'].split(',')),[]])):         
+    with mock.patch("cfct.manifest.manifest_parser.OrganizationsData.get_accounts_in_ct_baseline_config_stack_set", mock.MagicMock(return_value=[list(os.environ['ACCOUNT_LIST'].split(',')),[]])):         
         manifest_name = 'manifest_version_1.yaml'
         file_path = TESTS_DIR + manifest_name
         os.environ['MANIFEST_FILE_NAME'] = manifest_name
@@ -164,14 +165,14 @@ def test_version_1_manifest_stackset_sm_input(s3_setup, organizations_setup,
         assert sm_input_list[1]['ResourceProperties']['StackSetName'] == \
             "CustomControlTower-stackset-2"
 
-
+@pytest.mark.unit
 def test_version_2_manifest_stackset_sm_input(s3_setup, organizations_setup,
                                               ssm_client, mocker):
 
     logger.info('os.environ[ACCOUNT_LIST]: {}'.format(list(os.environ['ACCOUNT_LIST'].split(','))))
 
     # mock API call and assign return value
-    with mock.patch("manifest.manifest_parser.OrganizationsData.get_accounts_in_ct_baseline_config_stack_set", mock.MagicMock(return_value=[list(os.environ['ACCOUNT_LIST'].split(',')),[]])):                        
+    with mock.patch("cfct.manifest.manifest_parser.OrganizationsData.get_accounts_in_ct_baseline_config_stack_set", mock.MagicMock(return_value=[list(os.environ['ACCOUNT_LIST'].split(',')),[]])):                        
         manifest_name = 'manifest_version_2.yaml'
         file_path = TESTS_DIR + manifest_name
         os.environ['MANIFEST_FILE_NAME'] = manifest_name
@@ -198,7 +199,7 @@ def test_version_2_manifest_stackset_sm_input(s3_setup, organizations_setup,
         # parameters key has empty dict
         assert sm_input_list[2]['ResourceProperties']['Parameters'] == {}
 
-
+@pytest.mark.unit
 def test_root_ou_stackset(mocker):
     org = parse.OrganizationsData()
     mocker.patch.object(org.stack_set, 'get_accounts_and_regions_per_stack_set')
@@ -209,7 +210,7 @@ def test_root_ou_stackset(mocker):
     resp = org.get_accounts_in_ou(ou_id_to_account_map, ou_name_to_id_map, ou_list)
     assert resp == ['000', '111']
 
-
+@pytest.mark.unit
 def test_root_ou_stackset_no():
     org = parse.OrganizationsData()
     ou_id_to_account_map = {}

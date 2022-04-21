@@ -13,12 +13,14 @@
 #  and limitations under the License.                                         #
 ###############################################################################
 
-from manifest.stage_to_s3 import StageFile
-from utils.logger import Logger
+from cfct.manifest.stage_to_s3 import StageFile
+from cfct.utils.logger import Logger
 from os import environ
+import pytest
+
 logger = Logger('info')
 
-
+@pytest.mark.unit
 def test_convert_url():
     bucket_name = 'my-bucket-name'
     key_name = 'my-key-name'
