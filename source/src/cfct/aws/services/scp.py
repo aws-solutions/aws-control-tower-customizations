@@ -26,13 +26,12 @@ class ServiceControlPolicy(Boto3Session):
         super().__init__(logger, __service_name, **kwargs)
         self.org_client = super().get_client()
 
-    def list_policies(self, max_items=100, page_size=20):
+    def list_policies(self, page_size=20):
         try:
             paginator = self.org_client.get_paginator('list_policies')
             response_iterator = paginator.paginate(
                 Filter='SERVICE_CONTROL_POLICY',
                 PaginationConfig={
-                    'MaxItems': max_items,
                     'PageSize': page_size
                 }
             )
@@ -41,7 +40,7 @@ class ServiceControlPolicy(Boto3Session):
             self.logger.log_unhandled_exception(e)
             raise
 
-    def list_policies_for_target(self, target_id, max_items=100, page_size=20):
+    def list_policies_for_target(self, target_id, page_size=20):
         try:
             paginator = self.org_client\
                 .get_paginator('list_policies_for_target')
@@ -49,7 +48,6 @@ class ServiceControlPolicy(Boto3Session):
                 TargetId=target_id,
                 Filter='SERVICE_CONTROL_POLICY',
                 PaginationConfig={
-                    'MaxItems': max_items,
                     'PageSize': page_size
                 }
             )
@@ -58,14 +56,13 @@ class ServiceControlPolicy(Boto3Session):
             self.logger.log_unhandled_exception(e)
             raise
 
-    def list_targets_for_policy(self, policy_id, max_items=100, page_size=20):
+    def list_targets_for_policy(self, policy_id, page_size=20):
         try:
             paginator = self.org_client.get_paginator(
                 'list_targets_for_policy')
             response_iterator = paginator.paginate(
                 PolicyId=policy_id,
                 PaginationConfig={
-                    'MaxItems': max_items,
                     'PageSize': page_size
                 }
             )
