@@ -51,7 +51,7 @@ scp_scripts () {
 stackset_scripts () {
     echo "Date: $(date) Path: $(pwd)"
     echo "python state_machine_trigger.py $LOG_LEVEL $WAIT_TIME $MANIFEST_FILE_PATH $SM_ARN $ARTIFACT_BUCKET $STACKSET_STAGE_NAME $KMS_KEY_ALIAS_NAME"
-    python state_machine_trigger.py "$LOG_LEVEL" "$WAIT_TIME" "$MANIFEST_FILE_PATH" "$SM_ARN" "$ARTIFACT_BUCKET" "$STACKSET_STAGE_NAME" "$KMS_KEY_ALIAS_NAME"
+    python state_machine_trigger.py "$LOG_LEVEL" "$WAIT_TIME" "$MANIFEST_FILE_PATH" "$SM_ARN" "$ARTIFACT_BUCKET" "$STACKSET_STAGE_NAME" "$KMS_KEY_ALIAS_NAME" "$ENFORCE_SUCCESSFUL_STACK_INSTANCES"
 }
 
 if [ "$STAGE_NAME_ARGUMENT" == $BUILD_STAGE_NAME ];

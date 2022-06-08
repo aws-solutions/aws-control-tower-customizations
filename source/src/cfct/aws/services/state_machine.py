@@ -45,7 +45,7 @@ class StateMachine(Boto3Session):
             self.logger.log_unhandled_exception(e)
             raise
 
-    def check_state_machine_status(self, execution_arn):
+    def check_state_machine_status(self, execution_arn) -> str:
         try:
             self.logger.info("Checking execution of state machine: {}"
                              .format(execution_arn))

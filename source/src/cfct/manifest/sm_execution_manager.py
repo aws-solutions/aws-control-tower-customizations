@@ -21,6 +21,7 @@ from uuid import uuid4
 from cfct.aws.services.s3 import S3
 from cfct.aws.services.state_machine import StateMachine
 from cfct.aws.services.cloudformation import StackSet
+from cfct.exceptions import StackSetHasFailedInstances
 from cfct.utils.string_manipulation import trim_length_from_end
 from cfct.aws.utils.url_conversion import parse_bucket_key_names
 from cfct.utils.parameter_manipulation import transform_params, \
@@ -31,7 +32,7 @@ from cfct.manifest.cfn_params_handler import CFNParamsHandler
 
 
 class SMExecutionManager:
-    def __init__(self, logger, sm_input_list):
+    def __init__(self, logger, sm_input_list, enforce_successful_stack_instances=False):
         self.logger = logger
         self.sm_input_list = sm_input_list
         self.list_sm_exec_arns = []
@@ -42,6 +43,7 @@ class SMExecutionManager:
         self.stack_set = StackSet(logger)
         self.wait_time = os.environ.get('WAIT_TIME')
         self.execution_mode = os.environ.get('EXECUTION_MODE')
+        self.enforce_successful_stack_instances = enforce_successful_stack_instances
 
     def launch_executions(self):
         self.logger.info("%%% Launching State Machine Execution %%%")
@@ -97,6 +99,9 @@ class SMExecutionManager:
                     self.monitor_state_machines_execution_status()
                 if status == 'FAILED':
                     return status, failed_execution_list
+                elif self.enforce_successful_stack_instances:
+                    self.enforce_stack_set_deployment_successful(stack_set_name)
+
                 else:
                     self.logger.info("State Machine execution completed. "
                                      "Starting next execution...")
@@ -342,8 +347,22 @@ class SMExecutionManager:
             if err_flag:
                 return 'FAILED', failed_sm_execution_list
             else:
-                return 'SUCCEEDED', ''
+                return 'SUCCEEDED', []
         else:
             self.logger.info("SM Execution List {} is empty, nothing to "
                              "monitor.".format(self.list_sm_exec_arns))
             return None, []
+
+    def enforce_stack_set_deployment_successful(self, stack_set_name: str) -> None:
+        failed_detailed_statuses = [
+            "CANCELLED",
+            "FAILED",
+            "INOPERABLE"
+        ]
+        list_filters = [{"Name": "DETAILED_STATUS", "Values": status} for status in failed_detailed_statuses]
+        # Note that we don't paginate because if this API returns any elements, failed instances exist.
+        for list_filter in list_filters:
+            response = self.stack_set.list_stack_instances(StackSetName=stack_set_name, Filters=[list_filter])
+            if response.get("Summaries", []):
+                raise StackSetHasFailedInstances(stack_set_name=stack_set_name, failed_stack_set_instances=response["Summaries"])
+        return None

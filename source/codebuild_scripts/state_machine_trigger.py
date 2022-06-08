@@ -15,6 +15,7 @@
 
 import os
 import sys
+from cfct.exceptions import StackSetHasFailedInstances
 from cfct.utils.logger import Logger
 import cfct.manifest.manifest_parser as parse
 from cfct.manifest.sm_execution_manager import SMExecutionManager
@@ -51,6 +52,9 @@ def main():
             os.environ['STAGE_NAME'] = stage_name
             os.environ['KMS_KEY_ALIAS_NAME'] = sys.argv[7]
             os.environ['CAPABILITIES'] = '["CAPABILITY_NAMED_IAM","CAPABILITY_AUTO_EXPAND"]'
+            enforce_successful_stack_instances = None
+            if len(sys.argv) > 8:
+                enforce_successful_stack_instances = True if sys.argv[8] == "true" else False
 
             sm_input_list = []
             if stage_name.upper() == 'SCP':
@@ -68,7 +72,7 @@ def main():
 
             if sm_input_list:
                 logger.info("=== Launching State Machine Execution ===")
-                launch_state_machine_execution(sm_input_list)
+                launch_state_machine_execution(sm_input_list, enforce_successful_stack_instances)
             else:
                 logger.info("State Machine input list is empty. No action "
                             "required.")
@@ -91,10 +95,22 @@ def get_stack_set_inputs() -> list:
     return parse.stack_set_manifest()
 
 
-def launch_state_machine_execution(sm_input_list):
+def launch_state_machine_execution(sm_input_list, enforce_successful_stack_instances=False):
     if isinstance(sm_input_list, list):
-        manager = SMExecutionManager(logger, sm_input_list)
-        status, failed_list = manager.launch_executions()
+        manager = SMExecutionManager(logger, sm_input_list, enforce_successful_stack_instances)
+        try:
+            status, failed_list = manager.launch_executions()
+        except StackSetHasFailedInstances as error:
+            logger.error(f"{error.stack_set_name} has following failed instances:")
+            for instance in error.failed_stack_set_instances:
+                message = {
+                    "StackID": instance['StackId'],
+                    "Account": instance['Account'],
+                    "Region": instance['Region'],
+                    "StatusReason": instance['StatusReason']
+                }
+                logger.error(message)
+            sys.exit(1)
 
     else:
         raise TypeError("State Machine Input List must be of list type")

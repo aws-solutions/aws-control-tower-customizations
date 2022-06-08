@@ -1,6 +1,7 @@
 # Development
 .DS_Store
-.idea/
+.idea
+.vscode
 *.pyc
 *.so
 .eggs
@@ -10,6 +11,7 @@
 .python-version
 __pycache__
 .pytest_cache
+.mypy_cache
 
 # Ignore virtual environments
 venv

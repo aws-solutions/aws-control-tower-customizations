@@ -997,7 +997,7 @@ class StackSetSMRequests(object):
         cfn = Stacks(self.logger,
                      region,
                      credentials=_assume_role(self.logger, account))
-        response = cfn.describe_stacks(stack_name)
+        response = cfn.describe_stacks(stack_id)
         stacks = response.get('Stacks')
 
         if stacks is not None and type(stacks) is list:
