@@ -40,12 +40,12 @@ chmod +x ./deployment/build-s3-dist.sh
 
   * Upload the AWS CloudFormation template to your global bucket in the following pattern
     ``` 
-    s3://my-bucket-name/$SOLUTION_NAME/$VERSION/ 
+    s3://$TEMPLATE_OUTPUT_BUCKET/$SOLUTION_NAME/$VERSION/ 
     ``` 
 
   * Upload the customized source code zip packages to your regional bucket in the following pattern
     ``` 
-    s3://my-bucket-name-$REGION/$SOLUTION_NAME/$VERSION/
+    s3://$DIST_OUTPUT_BUCKET_PREFIX-$REGION/$SOLUTION_NAME/$VERSION/
     ``` 
 
 ## Deploying the customized solution
