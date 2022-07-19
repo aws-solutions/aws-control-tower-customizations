@@ -660,11 +660,15 @@ class OrganizationsData:
     def get_final_ou_list(self, ou_list):
         # Get ou id given an ou name
         final_ou_list = []
-        for ou_name in ou_list: 
-            ou_id= self.get_ou_id(ou_name, ":")
-            this_ou_list= [ou_name, ou_id]
-            final_ou_list.append(this_ou_list)
-        
+        for ou_name in ou_list:
+            try:
+                self.logger.info("[manifest_parser.get_final_ou_list] Checking OU name: {}.".format(ou_name))
+                ou_id= self.get_ou_id(ou_name, ":")
+                this_ou_list= [ou_name, ou_id]
+                final_ou_list.append(this_ou_list)
+            except Exception:
+                self.logger.info("[manifest_parser.get_final_ou_list] OU name: {} not found.".format(ou_name))
+
         self.logger.info(
             "[manifest_parser.get_final_ou_list] final_ou_list: {} ".format(
                 final_ou_list))
