@@ -838,6 +838,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - cloudformation:DescribeStackSet
+                  - cloudformation:ListStackSets
                   - cloudformation:ListStackInstances
                   - cloudformation:ListStackSetOperations
                 Resource:

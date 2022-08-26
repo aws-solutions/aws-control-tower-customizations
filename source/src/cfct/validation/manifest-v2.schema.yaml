@@ -7,6 +7,9 @@ mapping:
     type: date
     required: True
     enum: [2021-03-15]
+  "enable_stack_set_deletion":
+    type: bool
+    required: False
   "resources":
     type: seq
     sequence:

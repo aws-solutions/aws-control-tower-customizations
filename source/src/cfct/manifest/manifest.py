@@ -14,7 +14,7 @@
 ##############################################################################
 
 import yorm
-from yorm.types import String
+from yorm.types import String, Boolean
 from yorm.types import List, AttributeDictionary
 
 
@@ -158,6 +158,7 @@ class Resources(List):
 
 @yorm.attr(region=String)
 @yorm.attr(version=String)
+@yorm.attr(enable_stack_set_deletion=Boolean)
 @yorm.attr(cloudformation_resources=CfnResourcesList)
 @yorm.attr(organization_policies=PolicyList)
 @yorm.attr(resources=Resources)
@@ -165,6 +166,7 @@ class Resources(List):
 class Manifest:
     def __init__(self, manifest_file):
         self.manifest_file = manifest_file
+        self.enable_stack_set_deletion = False
         self.organization_policies = []
         self.cloudformation_resources = []
         self.resources = []

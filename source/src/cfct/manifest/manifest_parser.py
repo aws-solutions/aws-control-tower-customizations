@@ -16,6 +16,7 @@
 import os
 import sys
 import json
+from typing import List, Dict, Any
 from cfct.utils.logger import Logger
 from cfct.manifest.manifest import Manifest
 from cfct.manifest.stage_to_s3 import StageFile
@@ -160,6 +161,7 @@ class StackSetParser:
 
     def __init__(self):
         self.logger = logger
+        self.stack_set = StackSet(logger)
         self.manifest = Manifest(os.environ.get('MANIFEST_FILE_PATH'))
         self.manifest_folder = os.environ.get('MANIFEST_FOLDER')
 
@@ -216,6 +218,9 @@ class StackSetParser:
         else:
             return state_machine_inputs
 
+
+
+
     def parse_stack_set_manifest_v2(self) -> list:
 
         self.logger.info("Parsing Core Resources from {} file"
@@ -223,10 +228,20 @@ class StackSetParser:
         build = BuildStateMachineInput(self.manifest.region)
         org = OrganizationsData()
         organizations_data = org.get_organization_details()
-        state_machine_inputs = []
+
+        state_machine_inputs: List[Dict[str, Any]] = []
+
+        if self.manifest.enable_stack_set_deletion:
+            manifest_stacksets: List[str] = []
+            for resource in self.manifest.resources:
+                if resource["deploy_method"] == StackSet.DEPLOY_METHOD:
+                    manifest_stacksets.append(resource['name'])
+            
+            stacksets_to_be_deleted = self.stack_set.get_stack_sets_not_present_in_manifest(manifest_stack_sets=manifest_stacksets)
+            state_machine_inputs.extend(self.stack_set.generate_delete_request(stacksets_to_delete=stacksets_to_be_deleted))
 
         for resource in self.manifest.resources:
-            if resource.deploy_method == 'stack_set':
+            if resource.deploy_method == StackSet.DEPLOY_METHOD:
                 self.logger.info(f">>>> START : {resource.name} >>>>")
                 accounts_in_ou = []
 
@@ -318,11 +333,13 @@ class BuildStateMachineInput:
             region_list = [region]
 
         # if parameter file link is provided for the CFN resource
-
-        parameters = self._load_params_from_file(resource.parameter_file)
+        if resource.parameter_file:
+            parameters = self._load_params_from_file(resource.parameter_file)
+        else:
+            parameters = []
 
         sm_params = self.param_handler.update_params(parameters, account_list,
-                                                     region, False)
+                                                        region, False)
 
         ssm_parameters = self._create_ssm_input_map(resource.ssm_parameters)
 

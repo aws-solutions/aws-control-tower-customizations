@@ -19,7 +19,6 @@ import json
 import time
 import tempfile
 from random import randint
-import os
 from botocore.exceptions import ClientError
 from cfct.aws.services.organizations import Organizations as Org
 from cfct.aws.services.scp import ServiceControlPolicy as SCP

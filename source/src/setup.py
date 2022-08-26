@@ -42,6 +42,7 @@ setuptools.setup(
             "pytest == 6.2.4",
             "mypy == 0.930",
             "expecter==0.3.0",
+            "pykwalify == 1.8.0"
         ],
         "dev": [
             "ipython",

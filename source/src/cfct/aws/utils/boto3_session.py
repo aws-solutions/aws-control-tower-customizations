@@ -59,7 +59,7 @@ class Boto3Session:
             user_agent_extra=user_agent,
             retries={
                 'mode': 'standard',
-                'max_attempts': 10
+                'max_attempts': 20
             }
         )
 

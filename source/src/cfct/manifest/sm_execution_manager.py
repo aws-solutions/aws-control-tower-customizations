@@ -18,6 +18,7 @@ import time
 import tempfile
 import filecmp
 from uuid import uuid4
+from botocore.exceptions import ClientError
 from cfct.aws.services.s3 import S3
 from cfct.aws.services.state_machine import StateMachine
 from cfct.aws.services.cloudformation import StackSet
@@ -65,28 +66,31 @@ class SMExecutionManager:
             updated_sm_input = self.populate_ssm_params(sm_input)
             stack_set_name = sm_input.get('ResourceProperties')\
                 .get('StackSetName', '')
-
-            template_matched, parameters_matched = \
-                self.compare_template_and_params(sm_input, stack_set_name)
-
-            self.logger.info("Stack Set Name: {} | "
-                             "Same Template?: {} | "
-                             "Same Parameters?: {}"
-                             .format(stack_set_name,
-                                     template_matched,
-                                     parameters_matched))
-
-            if template_matched and parameters_matched and self.stack_set_exist:
-                start_execution_flag = self.compare_stack_instances(
-                    sm_input,
-                    stack_set_name
-                )
-                # template and parameter does not require update
-                updated_sm_input.update({'SkipUpdateStackSet': 'yes'})
-            else:
-                # the template or parameters needs to be updated
-                # start SM execution
+            is_deletion = sm_input.get("RequestType").lower() == "Delete".lower()
+            if is_deletion:
                 start_execution_flag = True
+            else:    
+                template_matched, parameters_matched = \
+                    self.compare_template_and_params(sm_input, stack_set_name)
+
+                self.logger.info("Stack Set Name: {} | "
+                                "Same Template?: {} | "
+                                "Same Parameters?: {}"
+                                .format(stack_set_name,
+                                        template_matched,
+                                        parameters_matched))
+
+                if template_matched and parameters_matched and self.stack_set_exist:
+                    start_execution_flag = self.compare_stack_instances(
+                        sm_input,
+                        stack_set_name
+                    )
+                    # template and parameter does not require update
+                    updated_sm_input.update({'SkipUpdateStackSet': 'yes'})
+                else:
+                    # the template or parameters needs to be updated
+                    # start SM execution
+                    start_execution_flag = True
 
             if start_execution_flag:
 
@@ -99,8 +103,16 @@ class SMExecutionManager:
                     self.monitor_state_machines_execution_status()
                 if status == 'FAILED':
                     return status, failed_execution_list
-                elif self.enforce_successful_stack_instances:
-                    self.enforce_stack_set_deployment_successful(stack_set_name)
+
+                if self.enforce_successful_stack_instances:
+                    try:
+                        self.enforce_stack_set_deployment_successful(stack_set_name)
+                    except ClientError as error:
+                        if (is_deletion and error.response['Error']['Code'] == "StackSetNotFoundException"):
+                            pass
+                        else:
+                            raise error
+                        
 
                 else:
                     self.logger.info("State Machine execution completed. "
@@ -362,7 +374,7 @@ class SMExecutionManager:
         list_filters = [{"Name": "DETAILED_STATUS", "Values": status} for status in failed_detailed_statuses]
         # Note that we don't paginate because if this API returns any elements, failed instances exist.
         for list_filter in list_filters:
-            response = self.stack_set.list_stack_instances(StackSetName=stack_set_name, Filters=[list_filter])
+            response = self.stack_set.cfn_client.list_stack_instances(StackSetName=stack_set_name, Filters=[list_filter])
             if response.get("Summaries", []):
                 raise StackSetHasFailedInstances(stack_set_name=stack_set_name, failed_stack_set_instances=response["Summaries"])
         return None

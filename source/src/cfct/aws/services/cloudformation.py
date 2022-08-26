@@ -19,10 +19,17 @@ import os
 from botocore.exceptions import ClientError
 from cfct.utils.retry_decorator import try_except_retry
 from cfct.aws.utils.boto3_session import Boto3Session
+from cfct.types import StackSetInstanceTypeDef, StackSetRequestTypeDef, ResourcePropertiesTypeDef
 import json
+
+from typing import Dict, List, Any
 
 
 class StackSet(Boto3Session):
+    DEPLOYED_BY_CFCT_TAG = {"Key": "AWS_Solutions", "Value": "CustomControlTowerStackSet"}
+    CFCT_STACK_SET_PREFIX = "CustomControlTower-"
+    DEPLOY_METHOD = "stack_set"
+
     def __init__(self, logger, **kwargs):
         self.logger = logger
         __service_name = 'cloudformation'
@@ -35,6 +42,7 @@ class StackSet(Boto3Session):
         self.max_results_per_page = 20
         super().__init__(logger, __service_name, **kwargs)
         self.cfn_client = super().get_client()
+
         self.operation_in_progress_except_msg =  \
             'Caught exception OperationInProgressException'  \
             ' handling the exception...'
@@ -357,6 +365,91 @@ class StackSet(Boto3Session):
         except ClientError as e:
             self.logger.log_unhandled_exception(e)
             raise
+
+    def _filter_managed_stack_set_names(self, list_stackset_response: Dict[str, Any]) -> List[str]:
+        """
+        Reduces a list of given stackset summaries to only those considered managed by CfCT
+        """
+        managed_stack_set_names: List[str] = []
+        for summary in list_stackset_response['Summaries']:
+            stack_set_name = summary['StackSetName']
+            try:
+                response: Dict[str, Any] = self.cfn_client.describe_stack_set(StackSetName=stack_set_name)
+            except ClientError as error:
+                if error.response['Error']['Code'] == "StackSetNotFoundException":
+                    continue
+                raise
+
+            if self.is_managed_by_cfct(describe_stackset_response=response):
+                managed_stack_set_names.append(stack_set_name)
+        
+        return managed_stack_set_names
+
+    def get_managed_stack_set_names(self) -> List[str]:
+        """
+        Discovers all StackSets prefixed with 'CustomControlTower-' and that
+        have the tag {Key: AWS_Solutions, Value: CustomControlTowerStackSet}
+        """
+
+        managed_stackset_names: List[str] = []
+        paginator = self.cfn_client.get_paginator("list_stack_sets")
+        for page in paginator.paginate(Status="ACTIVE"):
+            managed_stackset_names.extend(self._filter_managed_stack_set_names(list_stackset_response=page))
+        return managed_stackset_names
+
+    def is_managed_by_cfct(self, describe_stackset_response: Dict[str, Any]) -> bool:
+        """
+        A StackSet is considered managed if it has both the prefix we expect, and the proper tag
+        """
+        
+        has_tag = StackSet.DEPLOYED_BY_CFCT_TAG in describe_stackset_response['StackSet']['Tags']
+        has_prefix = describe_stackset_response['StackSet']['StackSetName'].startswith(StackSet.CFCT_STACK_SET_PREFIX)
+        is_active = describe_stackset_response['StackSet']['Status'] == "ACTIVE"
+        return all((has_prefix, has_tag, is_active))
+
+    def get_stack_sets_not_present_in_manifest(self, manifest_stack_sets: List[str]) -> List[str]:
+        """
+        Compares list of stacksets defined in the manifest versus the stacksets in the account
+        and returns a list of all stackset names to be deleted
+        """
+
+        # Stack sets defined in the manifest will not have the CFCT_STACK_SET_PREFIX
+        # To make comparisons simpler
+        manifest_stack_sets_with_prefix = [f"{StackSet.CFCT_STACK_SET_PREFIX}{name}" for name in manifest_stack_sets]
+        cfct_deployed_stack_sets = self.get_managed_stack_set_names()
+        return list(set(cfct_deployed_stack_sets).difference(set(manifest_stack_sets_with_prefix)))
+
+    def generate_delete_request(self, stacksets_to_delete: List[str]) -> List[StackSetRequestTypeDef]:
+        requests: List[StackSetRequestTypeDef] = []
+        for stackset_name in stacksets_to_delete:
+            deployed_instances = self._get_stackset_instances(stackset_name=stackset_name)
+            requests.append(StackSetRequestTypeDef(
+                RequestType="Delete",
+                ResourceProperties=ResourcePropertiesTypeDef(
+                    StackSetName=stackset_name,
+                    TemplateURL="DeleteStackSetNoopURL",
+                    Capabilities=json.dumps(["CAPABILITY_NAMED_IAM", "CAPABILITY_AUTO_EXPAND"]),
+                    Parameters={},
+                    AccountList=list({instance['account'] for instance in deployed_instances}),
+                    RegionList=list({instance['region'] for instance in deployed_instances}),
+                    SSMParameters={}
+                ),
+                SkipUpdateStackSet="yes",
+            ))
+        return requests
+
+
+    def _get_stackset_instances(self, stackset_name: str) -> List[StackSetInstanceTypeDef]:
+        instance_regions_and_accounts: List[StackSetInstanceTypeDef] = []
+        paginator = self.cfn_client.get_paginator("list_stack_instances")
+        for page in paginator.paginate(StackSetName=stackset_name):
+            for summary in page['Summaries']:
+                instance_regions_and_accounts.append(StackSetInstanceTypeDef(
+                    account=summary['Account'],
+                    region=summary['Region'],
+                ))
+
+        return instance_regions_and_accounts
 
 
 class Stacks(Boto3Session):
