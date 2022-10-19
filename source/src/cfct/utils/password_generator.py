@@ -13,11 +13,11 @@
 #  and limitations under the License.                                         #
 ###############################################################################
 
-import string
 import random
+import string
 
 
-def random_pwd_generator(length, additional_str=''):
+def random_pwd_generator(length, additional_str=""):
     """Generate random password.
 
     Args:
@@ -27,13 +27,13 @@ def random_pwd_generator(length, additional_str=''):
     Returns:
         password
     """
-    chars = string.ascii_uppercase + string.ascii_lowercase + string.digits \
-        + additional_str
+    chars = (
+        string.ascii_uppercase + string.ascii_lowercase + string.digits + additional_str
+    )
     # Making sure the password has two numbers and symbols at the very least
-    password = ''.join(random.SystemRandom().choice(chars)
-                       for _ in range(length-4)) + \
-               ''.join(random.SystemRandom().choice(string.digits)
-                       for _ in range(2)) + \
-               ''.join(random.SystemRandom().choice(additional_str)
-                       for _ in range(2))
+    password = (
+        "".join(random.SystemRandom().choice(chars) for _ in range(length - 4))
+        + "".join(random.SystemRandom().choice(string.digits) for _ in range(2))
+        + "".join(random.SystemRandom().choice(additional_str) for _ in range(2))
+    )
     return password

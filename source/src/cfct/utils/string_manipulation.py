@@ -16,7 +16,7 @@
 import re
 
 
-def sanitize(name, space_allowed=False, replace_with_character='_'):
+def sanitize(name, space_allowed=False, replace_with_character="_"):
     """Sanitizes input string.
 
     Replaces any character other than [a-zA-Z0-9._-] in a string
@@ -35,18 +35,14 @@ def sanitize(name, space_allowed=False, replace_with_character='_'):
     Raises:
     """
     if space_allowed:
-        sanitized_name = re.sub(r'([^\sa-zA-Z0-9._-])',
-                                replace_with_character,
-                                name)
+        sanitized_name = re.sub(r"([^\sa-zA-Z0-9._-])", replace_with_character, name)
     else:
-        sanitized_name = re.sub(r'([^a-zA-Z0-9._-])',
-                                replace_with_character,
-                                name)
+        sanitized_name = re.sub(r"([^a-zA-Z0-9._-])", replace_with_character, name)
     return sanitized_name
 
 
 def trim_length_from_end(string, length):
-    """ Trims the length of the given string to the given length
+    """Trims the length of the given string to the given length
 
     :param string:
     :param length:
@@ -59,28 +55,29 @@ def trim_length_from_end(string, length):
 
 
 def trim_string_from_front(string, remove_starts_with_string):
-    """ Remove string provided in the search_string
+    """Remove string provided in the search_string
     and returns remainder of the string.
     :param string:
     :param remove_starts_with_string:
     :return: trimmed string
     """
     if string.startswith(remove_starts_with_string):
-        return string[len(remove_starts_with_string):]
+        return string[len(remove_starts_with_string) :]
     else:
-        raise ValueError('The beginning of the string does '
-                         'not match the string to be trimmed.')
+        raise ValueError(
+            "The beginning of the string does " "not match the string to be trimmed."
+        )
 
 
 def extract_string(search_str):
-    return str[len(search_str):]
+    return str[len(search_str) :]
 
 
 def convert_list_values_to_string(_list):
     return list(map(str, _list))
 
 
-def convert_string_to_list(_string, separator=','):
+def convert_string_to_list(_string, separator=","):
     """
     splits the string with give separator and remove whitespaces
     """
@@ -92,7 +89,7 @@ def strip_list_items(array):
 
 
 def remove_empty_strings(array):
-    return [x for x in array if x != '']
+    return [x for x in array if x != ""]
 
 
 def list_sanitizer(array):

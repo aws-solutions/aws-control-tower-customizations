@@ -20,20 +20,18 @@ from cfct.aws.utils.boto3_session import Boto3Session
 
 
 class KMS(Boto3Session):
-    """This class makes KMS API calls as needed.
-    """
+    """This class makes KMS API calls as needed."""
+
     def __init__(self, logger, **kwargs):
         self.logger = logger
-        __service_name = 'kms'
+        __service_name = "kms"
         super().__init__(logger, __service_name, **kwargs)
         self.kms_client = super().get_client()
 
     def describe_key(self, alias_name):
         try:
-            key_id = 'alias/' + alias_name
-            response = self.kms_client.describe_key(
-                KeyId=key_id
-            )
+            key_id = "alias/" + alias_name
+            response = self.kms_client.describe_key(KeyId=key_id)
             return response
         except ClientError as e:
             self.logger.log_unhandled_exception(e)
@@ -44,15 +42,12 @@ class KMS(Boto3Session):
             response = self.kms_client.create_key(
                 Policy=policy,
                 Description=description,
-                KeyUsage='ENCRYPT_DECRYPT',
-                Origin='AWS_KMS',
+                KeyUsage="ENCRYPT_DECRYPT",
+                Origin="AWS_KMS",
                 BypassPolicyLockoutSafetyCheck=True,
                 Tags=[
-                    {
-                        'TagKey': tag_key,
-                        'TagValue': tag_value
-                    },
-                ]
+                    {"TagKey": tag_key, "TagValue": tag_value},
+                ],
             )
             return response
         except ClientError as e:
@@ -62,8 +57,7 @@ class KMS(Boto3Session):
     def create_alias(self, alias_name, key_name):
         try:
             response = self.kms_client.create_alias(
-                AliasName=alias_name,
-                TargetKeyId=key_name
+                AliasName=alias_name, TargetKeyId=key_name
             )
             return response
         except ClientError as e:
@@ -87,8 +81,8 @@ class KMS(Boto3Session):
                 KeyId=key_id,
                 Policy=policy,
                 # Per API docs, the only valid value is default.
-                PolicyName='default',
-                BypassPolicyLockoutSafetyCheck=True
+                PolicyName="default",
+                BypassPolicyLockoutSafetyCheck=True,
             )
             return response
         except ClientError as e:
@@ -100,7 +94,7 @@ class KMS(Boto3Session):
             response = self.get_key_rotation_status(key_id)
 
             # Enable auto key rotation only if it hasn't been enabled
-            if not response.get('KeyRotationEnabled'):
+            if not response.get("KeyRotationEnabled"):
                 self.kms_client.enable_key_rotation(KeyId=key_id)
             return response
         except ClientError as e:
@@ -109,9 +103,7 @@ class KMS(Boto3Session):
 
     def get_key_rotation_status(self, key_id):
         try:
-            response = self.kms_client.get_key_rotation_status(
-                KeyId=key_id
-            )
+            response = self.kms_client.get_key_rotation_status(KeyId=key_id)
             return response
         except ClientError as e:
             self.logger.log_unhandled_exception(e)

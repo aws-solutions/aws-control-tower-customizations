@@ -15,23 +15,25 @@
 
 import json
 import logging
+
 from cfct.utils.datetime_encoder import DateTimeEncoder
 
 
 class Logger(object):
-
-    def __init__(self, loglevel='warning'):
+    def __init__(self, loglevel="warning"):
         """Initializes logging"""
         self.config(loglevel=loglevel)
 
-    def config(self, loglevel='warning'):
+    def config(self, loglevel="warning"):
         loglevel = logging.getLevelName(loglevel.upper())
         main_logger = logging.getLogger()
         main_logger.setLevel(loglevel)
 
-        logfmt = '{"time_stamp": "%(asctime)s",' \
-                 '"log_level": "%(levelname)s",' \
-                 '"log_message": %(message)s}\n'
+        logfmt = (
+            '{"time_stamp": "%(asctime)s",'
+            '"log_level": "%(levelname)s",'
+            '"log_message": %(message)s}\n'
+        )
         if len(main_logger.handlers) == 0:
             main_logger.addHandler(logging.StreamHandler())
         main_logger.handlers[0].setFormatter(logging.Formatter(logfmt))
@@ -85,7 +87,5 @@ class Logger(object):
 
     def log_general_exception(self, file, method, exception):
         """log general exception"""
-        message = {'FILE': file,
-                   'METHOD': method,
-                   'EXCEPTION': str(exception)}
+        message = {"FILE": file, "METHOD": method, "EXCEPTION": str(exception)}
         self.log.exception(self._format(message))

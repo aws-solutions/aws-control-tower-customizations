@@ -16,14 +16,14 @@
 # !/bin/python
 
 from botocore.exceptions import ClientError
-from cfct.utils.retry_decorator import try_except_retry
 from cfct.aws.utils.boto3_session import Boto3Session
+from cfct.utils.retry_decorator import try_except_retry
 
 
 class Organizations(Boto3Session):
     def __init__(self, logger, **kwargs):
         self.logger = logger
-        __service_name = 'organizations'
+        __service_name = "organizations"
         super().__init__(logger, __service_name, **kwargs)
         self.org_client = super().get_client()
         self.next_token_returned_msg = "Next Token Returned: {}"
@@ -41,19 +41,17 @@ class Organizations(Boto3Session):
                 ParentId=parent_id
             )
 
-            ou_list = response.get('OrganizationalUnits', [])
-            next_token = response.get('NextToken', None)
+            ou_list = response.get("OrganizationalUnits", [])
+            next_token = response.get("NextToken", None)
 
             while next_token is not None:
-                self.logger.info(self.next_token_returned_msg
-                                 .format(next_token))
-                response = self.org_client \
-                    .list_organizational_units_for_parent(
-                        ParentId=parent_id,
-                        NextToken=next_token)
+                self.logger.info(self.next_token_returned_msg.format(next_token))
+                response = self.org_client.list_organizational_units_for_parent(
+                    ParentId=parent_id, NextToken=next_token
+                )
                 self.logger.info("Extending OU List")
-                ou_list.extend(response.get('OrganizationalUnits', []))
-                next_token = response.get('NextToken', None)
+                ou_list.extend(response.get("OrganizationalUnits", []))
+                next_token = response.get("NextToken", None)
 
             return ou_list
         except ClientError as e:
@@ -62,23 +60,19 @@ class Organizations(Boto3Session):
 
     def list_accounts_for_parent(self, parent_id):
         try:
-            response = self.org_client.list_accounts_for_parent(
-                ParentId=parent_id
-            )
+            response = self.org_client.list_accounts_for_parent(ParentId=parent_id)
 
-            account_list = response.get('Accounts', [])
-            next_token = response.get('NextToken', None)
+            account_list = response.get("Accounts", [])
+            next_token = response.get("NextToken", None)
 
             while next_token is not None:
-                self.logger.info(self.next_token_returned_msg
-                                 .format(next_token))
+                self.logger.info(self.next_token_returned_msg.format(next_token))
                 response = self.org_client.list_accounts_for_parent(
-                    ParentId=parent_id,
-                    NextToken=next_token
+                    ParentId=parent_id, NextToken=next_token
                 )
                 self.logger.info("Extending Account List")
-                account_list.extend(response.get('Accounts', []))
-                next_token = response.get('NextToken', None)
+                account_list.extend(response.get("Accounts", []))
+                next_token = response.get("NextToken", None)
 
             return account_list
         except ClientError as e:
@@ -97,18 +91,15 @@ class Organizations(Boto3Session):
         try:
             response = self.org_client.list_accounts()
 
-            account_list = response.get('Accounts', [])
-            next_token = response.get('NextToken', None)
+            account_list = response.get("Accounts", [])
+            next_token = response.get("NextToken", None)
 
             while next_token is not None:
-                self.logger.info(self.next_token_returned_msg
-                                 .format(next_token))
-                response = self.org_client.list_accounts(
-                    NextToken=next_token
-                )
+                self.logger.info(self.next_token_returned_msg.format(next_token))
+                response = self.org_client.list_accounts(NextToken=next_token)
                 self.logger.info("Extending Account List")
-                account_list.extend(response.get('Accounts', []))
-                next_token = response.get('NextToken', None)
+                account_list.extend(response.get("Accounts", []))
+                next_token = response.get("NextToken", None)
 
             return account_list
         except ClientError as e:

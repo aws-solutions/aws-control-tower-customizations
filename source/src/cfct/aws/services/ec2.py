@@ -22,31 +22,24 @@ from cfct.aws.utils.boto3_session import Boto3Session
 class EC2(Boto3Session):
     def __init__(self, logger, region, **kwargs):
         self.logger = logger
-        __service_name = 'ec2'
-        kwargs.update({'region': region})
+        __service_name = "ec2"
+        kwargs.update({"region": region})
         super().__init__(logger, __service_name, **kwargs)
         self.ec2_client = super().get_client()
 
-    def describe_availability_zones(self, name='state', value='available'):
+    def describe_availability_zones(self, name="state", value="available"):
         try:
             response = self.ec2_client.describe_availability_zones(
-                Filters=[
-                    {
-                        'Name': name,
-                        'Values': [value]
-                    }
-                ]
+                Filters=[{"Name": name, "Values": [value]}]
             )
-            return [resp['ZoneName'] for resp in response['AvailabilityZones']]
+            return [resp["ZoneName"] for resp in response["AvailabilityZones"]]
         except ClientError as e:
             self.logger.log_unhandled_exception(e)
             raise
 
     def create_key_pair(self, key_name):
         try:
-            response = self.ec2_client.create_key_pair(
-                KeyName=key_name
-            )
+            response = self.ec2_client.create_key_pair(KeyName=key_name)
             return response
         except ClientError as e:
             self.logger.log_unhandled_exception(e)

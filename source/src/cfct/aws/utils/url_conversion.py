@@ -13,8 +13,8 @@
 #  and limitations under the License.                                         #
 ###############################################################################
 
-from urllib.parse import urlparse
 from os import environ
+from urllib.parse import urlparse
 
 
 def convert_s3_url_to_http_url(s3_url):
@@ -39,19 +39,21 @@ def convert_s3_url_to_http_url(s3_url):
 
 
 def build_http_url(bucket_name, key_name):
-    """ Builds http url for the given bucket and key name
+    """Builds http url for the given bucket and key name
 
     :param bucket_name:
     :param key_name:
     :return HTTP URL:
      example: https://bucket-name.s3.Region.amazonaws.com/key-name
     """
-    return "{}{}{}{}{}{}".format('https://',
-                                 bucket_name,
-                                 '.s3.',
-                                 environ.get('AWS_REGION'),
-                                 '.amazonaws.com/',
-                                 key_name)
+    return "{}{}{}{}{}{}".format(
+        "https://",
+        bucket_name,
+        ".s3.",
+        environ.get("AWS_REGION"),
+        ".amazonaws.com/",
+        key_name,
+    )
 
 
 def parse_bucket_key_names(http_url):
@@ -69,16 +71,16 @@ def parse_bucket_key_names(http_url):
     # Handle Amazon S3 path-style URL
     # Needed to handle response from describe_provisioning_artifact API - response['Info']['TemplateUrl']
     # example: https://s3.Region.amazonaws.com/bucket-name/key-name
-    if http_url.startswith('https://s3.'):
+    if http_url.startswith("https://s3."):
         parsed_url = urlparse(http_url)
-        bucket_name = parsed_url.path.split('/', 2)[1]
-        key_name = parsed_url.path.split('/', 2)[2]
-        region = parsed_url.netloc.split('.')[1]
+        bucket_name = parsed_url.path.split("/", 2)[1]
+        key_name = parsed_url.path.split("/", 2)[2]
+        region = parsed_url.netloc.split(".")[1]
     # Handle Amazon S3 virtual-hosted–style URL
     # example: https://bucket-name.s3.Region.amazonaws.com/key-name
     else:
         parsed_url = urlparse(http_url)
-        bucket_name = parsed_url.netloc.split('.')[0]
+        bucket_name = parsed_url.netloc.split(".")[0]
         key_name = parsed_url.path[1:]
-        region = parsed_url.netloc.split('.')[2]
+        region = parsed_url.netloc.split(".")[2]
     return bucket_name, key_name, region

@@ -13,11 +13,12 @@
 #  governing permissions  and limitations under the License.                 #
 ##############################################################################
 
-import yaml
 import sys
+
+import yaml
 from cfct.utils.logger import Logger
 
-log_level = 'info'
+log_level = "info"
 logger = Logger(loglevel=log_level)
 
 
@@ -28,10 +29,10 @@ def update_level_one_list(existing, add_on, level_one_dct_key, decision_key):
         for add_on_key_level_one_list in add_on.get(level_one_dct_key):
             flag = False
             if existing.get(level_one_dct_key):
-                for existing_key_level_one_list in \
-                        existing.get(level_one_dct_key):
-                    if add_on_key_level_one_list.get(decision_key) ==  \
-                         existing_key_level_one_list.get(decision_key):
+                for existing_key_level_one_list in existing.get(level_one_dct_key):
+                    if add_on_key_level_one_list.get(
+                        decision_key
+                    ) == existing_key_level_one_list.get(decision_key):
                         flag = False
                         # break the loop if same name is found in the list
                         break
@@ -41,16 +42,19 @@ def update_level_one_list(existing, add_on, level_one_dct_key, decision_key):
                         flag = True
             else:
                 flag = True
-            if flag and add_on_key_level_one_list not in existing.get(level_one_dct_key):
+            if flag and add_on_key_level_one_list not in existing.get(
+                level_one_dct_key
+            ):
                 # to avoid duplication append check to see if value in
                 # the list already exist
-                logger.info("(Level 1) Adding new {} > {}: {}"
-                            .format(type(add_on_key_level_one_list)
-                                    .__name__, decision_key,
-                                    add_on_key_level_one_list
-                                    .get(decision_key)))
-                existing.get(level_one_dct_key) \
-                    .append(add_on_key_level_one_list)
+                logger.info(
+                    "(Level 1) Adding new {} > {}: {}".format(
+                        type(add_on_key_level_one_list).__name__,
+                        decision_key,
+                        add_on_key_level_one_list.get(decision_key),
+                    )
+                )
+                existing.get(level_one_dct_key).append(add_on_key_level_one_list)
                 logger.debug(existing.get(level_one_dct_key))
         return existing
 
@@ -68,30 +72,32 @@ def _json_to_yaml(json, filename):
     # print(yml)
 
     # create new manifest file
-    file = open(filename, 'w')
+    file = open(filename, "w")
     file.write(yml)
     file.close()
 
 
 def update_scp_policies(add_on, original):
-    level_1_key = 'organization_policies'
-    decision_key = 'name'
+    level_1_key = "organization_policies"
+    decision_key = "name"
 
     # process new scp policy addition
     updated_manifest = update_level_one_list(
-        original, add_on, level_1_key, decision_key)
+        original, add_on, level_1_key, decision_key
+    )
     original = _reload(updated_manifest, original)
 
     return original
 
 
 def update_cloudformation_resources(add_on, original):
-    level_1_key = 'cloudformation_resources'
-    decision_key = 'name'
+    level_1_key = "cloudformation_resources"
+    decision_key = "name"
 
     # process new baseline addition
     updated_manifest = update_level_one_list(
-        original, add_on, level_1_key, decision_key)
+        original, add_on, level_1_key, decision_key
+    )
     original = _reload(updated_manifest, original)
 
     return original
@@ -118,8 +124,12 @@ if __name__ == "__main__":
         output_manifest_file_path = sys.argv[3]
         main()
     else:
-        print('No arguments provided. Please provide the existing and'
-              ' new manifest files names.')
-        print('Example: merge_manifest.py'
-              ' <ORIG-FILE-NAME> <ADD-ON-FILE-NAME> <NEW-FILE-NAME>')
+        print(
+            "No arguments provided. Please provide the existing and"
+            " new manifest files names."
+        )
+        print(
+            "Example: merge_manifest.py"
+            " <ORIG-FILE-NAME> <ADD-ON-FILE-NAME> <NEW-FILE-NAME>"
+        )
         sys.exit(2)

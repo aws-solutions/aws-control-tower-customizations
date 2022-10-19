@@ -15,8 +15,9 @@
 
 # !/bin/python
 import os
+
 from cfct.aws.services.s3 import S3
-from cfct.aws.utils.url_conversion import convert_s3_url_to_http_url, build_http_url
+from cfct.aws.utils.url_conversion import build_http_url, convert_s3_url_to_http_url
 
 
 class StageFile(S3):
@@ -26,14 +27,15 @@ class StageFile(S3):
         boto_3 = Boto3Session(logger, region, service_name, **kwargs)
         client = boto_3.get_client()
     """
+
     def __init__(self, logger, relative_file_path):
         """
-            Parameters
-            ----------
-            logger : object
-                The logger object
-            relative_file_path : str
-                Relative Path of the file.
+        Parameters
+        ----------
+        logger : object
+            The logger object
+        relative_file_path : str
+            Relative Path of the file.
         """
         self.logger = logger
         self.relative_file_path = relative_file_path
@@ -45,9 +47,9 @@ class StageFile(S3):
         :return: S3 URL, type: String
         """
 
-        if self.relative_file_path.lower().startswith('s3'):
+        if self.relative_file_path.lower().startswith("s3"):
             return self.convert_url()
-        elif self.relative_file_path.lower().startswith('http'):
+        elif self.relative_file_path.lower().startswith("http"):
             return self.relative_file_path
         else:
             return self.stage_file()
@@ -64,17 +66,16 @@ class StageFile(S3):
 
         :return: S3 URL, type: String
         """
-        local_file = os.path.join(os.environ.get('MANIFEST_FOLDER'),
-                                  self.relative_file_path)
-        key_name = "{}/{}".format(os.environ.get('TEMPLATE_KEY_PREFIX'),
-                                  self.relative_file_path)
-        self.logger.info("Uploading the template file: {} to S3 bucket: {} "
-                         "and key: {}".format(local_file,
-                                              os.environ.get('STAGING_BUCKET'),
-                                              key_name))
-        super().upload_file(os.environ.get('STAGING_BUCKET'),
-                            local_file,
-                            key_name)
-        http_url = build_http_url(os.environ.get('STAGING_BUCKET'),
-                                  key_name)
+        local_file = os.path.join(
+            os.environ.get("MANIFEST_FOLDER"), self.relative_file_path
+        )
+        key_name = "{}/{}".format(
+            os.environ.get("TEMPLATE_KEY_PREFIX"), self.relative_file_path
+        )
+        self.logger.info(
+            "Uploading the template file: {} to S3 bucket: {} "
+            "and key: {}".format(local_file, os.environ.get("STAGING_BUCKET"), key_name)
+        )
+        super().upload_file(os.environ.get("STAGING_BUCKET"), local_file, key_name)
+        http_url = build_http_url(os.environ.get("STAGING_BUCKET"), key_name)
         return http_url

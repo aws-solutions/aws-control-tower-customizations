@@ -12,49 +12,49 @@
 #  KIND, express or implied. See the License for the specific language       #
 #  governing permissions  and limitations under the License.                 #
 ##############################################################################
-from moto import mock_ssm
-from cfct.utils.logger import Logger
-from cfct.manifest.cfn_params_handler import CFNParamsHandler
-from cfct.aws.services.ssm import SSM
 import pytest
+from cfct.aws.services.ssm import SSM
+from cfct.manifest.cfn_params_handler import CFNParamsHandler
+from cfct.utils.logger import Logger
+from moto import mock_ssm
 
-log_level = 'info'
+log_level = "info"
 logger = Logger(loglevel=log_level)
+
 
 @pytest.mark.unit
 def test_update_alfred_ssm():
-    keyword_ssm = 'alfred_ssm_not_exist_alfred_ssm'
-    value_ssm = 'parameter_store_value'
+    keyword_ssm = "alfred_ssm_not_exist_alfred_ssm"
+    value_ssm = "parameter_store_value"
     cph = CFNParamsHandler(logger)
-    value_ssm, param_flag = cph._update_alfred_ssm(
-        keyword_ssm, value_ssm, False)
+    value_ssm, param_flag = cph._update_alfred_ssm(keyword_ssm, value_ssm, False)
     assert param_flag is True
+
 
 @pytest.mark.unit
 @mock_ssm
 def test_update_params():
     logger.info("-- Put new parameter keys in mock environment")
     ssm = SSM(logger)
-    ssm.put_parameter('/key1', 'value1', 'Test parameter 1', 'String')
-    ssm.put_parameter('/key2', 'value2', 'Test parameter 2', 'String')
-    ssm.put_parameter('/key3', 'value3', 'Test parameter 3', 'String')
+    ssm.put_parameter("/key1", "value1", "Test parameter 1", "String")
+    ssm.put_parameter("/key2", "value2", "Test parameter 2", "String")
+    ssm.put_parameter("/key3", "value3", "Test parameter 3", "String")
 
     logger.info("-- Get parameter keys using alfred_ssm")
-    multiple_params = [{
-        "ParameterKey": "Key1",
-        "ParameterValue": [
-            "$[alfred_ssm_/key1]",
-            "$[alfred_ssm_/key2]",
-            "$[alfred_ssm_/key3]"
-        ]
-    }]
+    multiple_params = [
+        {
+            "ParameterKey": "Key1",
+            "ParameterValue": [
+                "$[alfred_ssm_/key1]",
+                "$[alfred_ssm_/key2]",
+                "$[alfred_ssm_/key3]",
+            ],
+        }
+    ]
     cph = CFNParamsHandler(logger)
     values = cph.update_params(multiple_params)
     assert values == {"Key1": ["value1", "value2", "value3"]}
 
-    single_param = [{
-        "ParameterKey": "Key2",
-        "ParameterValue": "$[alfred_ssm_/key1]"
-    }]
+    single_param = [{"ParameterKey": "Key2", "ParameterValue": "$[alfred_ssm_/key1]"}]
     value = cph.update_params(single_param)
     assert value == {"Key2": "value1"}

@@ -15,51 +15,57 @@
 
 # !/bin/python
 
-import boto3
 import json
+
+import boto3
 from botocore.exceptions import ClientError
-from cfct.utils.string_manipulation import sanitize
 from cfct.aws.utils.boto3_session import Boto3Session
+from cfct.utils.string_manipulation import sanitize
 
 
 class StateMachine(Boto3Session):
     def __init__(self, logger, **kwargs):
         self.logger = logger
-        __service_name = 'stepfunctions'
+        __service_name = "stepfunctions"
         super().__init__(logger, __service_name, **kwargs)
         self.state_machine_client = super().get_client()
 
     def start_execution(self, state_machine_arn, input, name):
         try:
-            self.logger.info("Starting execution of state machine: {} with "
-                             "input: {}".format(state_machine_arn, input))
+            self.logger.info(
+                "Starting execution of state machine: {} with "
+                "input: {}".format(state_machine_arn, input)
+            )
             response = self.state_machine_client.start_execution(
                 stateMachineArn=state_machine_arn,
                 input=json.dumps(input),
-                name=sanitize(name)
+                name=sanitize(name),
             )
-            self.logger.info("State machine Execution ARN: {}"
-                             .format(response['executionArn']))
-            return response.get('executionArn')
+            self.logger.info(
+                "State machine Execution ARN: {}".format(response["executionArn"])
+            )
+            return response.get("executionArn")
         except ClientError as e:
             self.logger.log_unhandled_exception(e)
             raise
 
     def check_state_machine_status(self, execution_arn) -> str:
         try:
-            self.logger.info("Checking execution of state machine: {}"
-                             .format(execution_arn))
+            self.logger.info(
+                "Checking execution of state machine: {}".format(execution_arn)
+            )
             response = self.state_machine_client.describe_execution(
                 executionArn=execution_arn
             )
-            self.logger.info("State machine Execution Status: {}"
-                             .format(response['status']))
-            if response['status'] == 'RUNNING':
-                return 'RUNNING'
-            elif response['status'] == 'SUCCEEDED':
-                return 'SUCCEEDED'
+            self.logger.info(
+                "State machine Execution Status: {}".format(response["status"])
+            )
+            if response["status"] == "RUNNING":
+                return "RUNNING"
+            elif response["status"] == "SUCCEEDED":
+                return "SUCCEEDED"
             else:
-                return 'FAILED'
+                return "FAILED"
         except ClientError as e:
             self.logger.log_unhandled_exception(e)
             raise

@@ -91,7 +91,26 @@ zip -Xr "$build_dist_dir"/custom-control-tower-configuration.zip ./*
 
 # build regional config zip file
 echo -e "\n*** Build regional config zip file"
-declare -a region_list=( "ap-northeast-2" "ap-southeast-2" "ca-central-1" "eu-west-1" "eu-west-2" "me-south-1" "us-east-1" "us-west-1" "ap-east-1" "ap-south-1" "eu-central-1" "eu-north-1" "eu-west-3" "sa-east-1" "us-east-2" "us-west-2" "ap-northeast-1" "ap-southeast-1" )
+# Support all regions in https://docs.aws.amazon.com/controltower/latest/userguide/region-how.html + GovCloud regions
+declare -a region_list=(
+    "us-east-1"
+    "us-east-2"
+    "us-west-2"
+    "ca-central-1"
+    "ap-southeast-2"
+    "ap-southeast-1"
+    "eu-central-1"
+    "eu-west-1"
+    "eu-west-2"
+    "eu-north-1"
+    "ap-south-1"
+    "ap-northeast-2"
+    "ap-northeast-1"
+    "eu-west-3"
+    "sa-east-1"
+    "us-gov-west-1"
+    "us-gov-east-1"
+)
 for region in "${region_list[@]}"
 do
   echo -e "\n Building config zip for $region region"

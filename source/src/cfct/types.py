@@ -1,5 +1,4 @@
-
-from typing import List, Dict, Any, TypedDict, Literal
+from typing import Any, Dict, List, Literal, TypedDict
 
 
 class ResourcePropertiesTypeDef(TypedDict):

@@ -14,6 +14,7 @@
 ###############################################################################
 
 import logging
+
 log = logging.getLogger(__name__)
 
 # This is a custom valiator specifically for pyKwlify Schema extensions

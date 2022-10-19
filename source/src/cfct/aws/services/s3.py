@@ -16,6 +16,7 @@
 # !/bin/python
 
 import tempfile
+
 from botocore.exceptions import ClientError
 from cfct.aws.utils.boto3_session import Boto3Session
 
@@ -23,16 +24,14 @@ from cfct.aws.utils.boto3_session import Boto3Session
 class S3(Boto3Session):
     def __init__(self, logger, **kwargs):
         self.logger = logger
-        __service_name = 's3'
+        __service_name = "s3"
         super().__init__(logger, __service_name, **kwargs)
         self.s3_client = super().get_client()
         self.s3_resource = super().get_resource()
 
     def get_bucket_policy(self, bucket_name):
         try:
-            response = self.s3_client.get_bucket_policy(
-                Bucket=bucket_name
-            )
+            response = self.s3_client.get_bucket_policy(Bucket=bucket_name)
             return response
         except ClientError as e:
             self.logger.log_unhandled_exception(e)
@@ -41,25 +40,24 @@ class S3(Boto3Session):
     def put_bucket_policy(self, bucket_name, bucket_policy):
         try:
             response = self.s3_client.put_bucket_policy(
-                Bucket=bucket_name,
-                Policy=bucket_policy
+                Bucket=bucket_name, Policy=bucket_policy
             )
             return response
         except ClientError as e:
             self.logger.log_unhandled_exception(e)
             raise
 
-    def upload_file(self, bucket_name, local_file_location,
-                    remote_file_location):
+    def upload_file(self, bucket_name, local_file_location, remote_file_location):
         try:
             self.s3_resource.Bucket(bucket_name).upload_file(
-                local_file_location, remote_file_location)
+                local_file_location, remote_file_location
+            )
         except ClientError as e:
             self.logger.log_unhandled_exception(e)
             raise
 
     def download_file(self, bucket_name, key_name, local_file_location):
-        """ This function downloads the file from the S3 bucket for a given
+        """This function downloads the file from the S3 bucket for a given
         S3 path in the method attribute.
 
         Use Cases:
@@ -72,12 +70,13 @@ class S3(Boto3Session):
         """
         try:
             self.logger.info(
-                "Downloading {}/{} from S3 to {}".format(bucket_name,
-                                                         key_name,
-                                                         local_file_location))
-            self.s3_resource\
-                .Bucket(bucket_name).download_file(key_name,
-                                                   local_file_location)
+                "Downloading {}/{} from S3 to {}".format(
+                    bucket_name, key_name, local_file_location
+                )
+            )
+            self.s3_resource.Bucket(bucket_name).download_file(
+                key_name, local_file_location
+            )
         except ClientError as e:
             self.logger.log_unhandled_exception(e)
             raise
@@ -87,15 +86,15 @@ class S3(Boto3Session):
             self.s3_client.put_bucket_encryption(
                 Bucket=bucket_name,
                 ServerSideEncryptionConfiguration={
-                    'Rules': [
+                    "Rules": [
                         {
-                            'ApplyServerSideEncryptionByDefault': {
-                                'SSEAlgorithm': 'aws:kms',
-                                'KMSMasterKeyID': key_id
+                            "ApplyServerSideEncryptionByDefault": {
+                                "SSEAlgorithm": "aws:kms",
+                                "KMSMasterKeyID": key_id,
                             }
                         },
                     ]
-                }
+                },
             )
 
         except ClientError as e:
@@ -106,7 +105,7 @@ class S3(Boto3Session):
         return self.s3_client.list_buckets()
 
     def get_s3_object(self, remote_s3_url):
-        """ This function downloads the file from the S3 bucket for a given
+        """This function downloads the file from the S3 bucket for a given
         S3 path in the method attribute.
 
         :param remote_s3_url: s3://bucket-name/key-name

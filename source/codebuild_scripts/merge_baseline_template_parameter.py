@@ -14,15 +14,16 @@
 ###############################################################################
 
 import json
-import sys
 import os
 import subprocess
+import sys
+
 from cfct.utils.logger import Logger
 
 
 def _read_file(file):
     if os.path.isfile(file):
-        logger.info('File - {} exists'.format(file))
+        logger.info("File - {} exists".format(file))
         logger.info("Reading from {}".format(file))
         with open(file) as f:
             return json.load(f)
@@ -31,7 +32,7 @@ def _read_file(file):
         sys.exit(1)
 
 
-def _write_file(data, file, mode='w'):
+def _write_file(data, file, mode="w"):
     logger.info("Writing to {}".format(file))
     with open(file, mode) as outfile:
         json.dump(data, outfile, indent=2)
@@ -46,44 +47,42 @@ def _flip_to_json(yaml_file):
 
 
 def _flip_to_yaml(json_file):
-    yaml_file = json_file[:-len(updated_flag)]
+    yaml_file = json_file[: -len(updated_flag)]
     logger.info("Flipping JSON > {} to YAML > {}".format(json_file, yaml_file))
     # final stage - convert json avm template to yaml format
     subprocess.run(["cfn-flip", "-y", json_file, yaml_file])
 
 
-def file_matcher(master_data, add_on_data, master_key='master',
-                 add_on_key='add_on'):
+def file_matcher(master_data, add_on_data, master_key="master", add_on_key="add_on"):
     for item in master_data.get(master_key):
         logger.info("Iterating Master AVM File List")
         for key, value in item.items():
-            logger.info('{}: {}'.format(key, value))
-            master_file_name = value.split('/')[-1]
-            logger.info("master_value: {}".format(value.split('/')[-1]))
+            logger.info("{}: {}".format(key, value))
+            master_file_name = value.split("/")[-1]
+            logger.info("master_value: {}".format(value.split("/")[-1]))
             for i in add_on_data.get(add_on_key):
                 logger.info("Iterating Add-On AVM File List for comparision.")
                 for k, v in i.items():
-                    logger.info('{}: {}'.format(k, v))
-                    add_on_file_name = v.split('/')[-1]
-                    logger.info("add_on_value: {}".format(v.split('/')[-1]))
+                    logger.info("{}: {}".format(k, v))
+                    add_on_file_name = v.split("/")[-1]
+                    logger.info("add_on_value: {}".format(v.split("/")[-1]))
                     if master_file_name == add_on_file_name:
-                        logger.info("Matching file names found - "
-                                    "full path below")
+                        logger.info("Matching file names found - " "full path below")
                         logger.info("File in master list: {}".format(value))
                         logger.info("File in add-on list: {}".format(v))
                         # Pass value and v to merge functions
-                        if master_file_name.lower().endswith('.template'):
+                        if master_file_name.lower().endswith(".template"):
                             logger.info("Processing template file")
                             # merge master avm template with add_on template
                             # send json data
-                            final_json = update_template(_flip_to_json(value),
-                                                         _flip_to_json(v))
+                            final_json = update_template(
+                                _flip_to_json(value), _flip_to_json(v)
+                            )
                             # write the json data to json file
-                            updated_json_file_name =  \
-                                os.path.join(value+updated_flag)
+                            updated_json_file_name = os.path.join(value + updated_flag)
                             _write_file(final_json, updated_json_file_name)
                             _flip_to_yaml(updated_json_file_name)
-                        if master_file_name.lower().endswith('.json'):
+                        if master_file_name.lower().endswith(".json"):
                             logger.info("Processing parameter file")
                             update_parameters(value, v)
 
@@ -92,16 +91,17 @@ def update_level_1_dict(master, add_on, level_1_key):
     for key1, value1 in add_on.items():
         if isinstance(value1, dict) and key1 == level_1_key:
             # Check if primary key matches
-            logger.info("Level 1 keys matched ADDON {} == {}".format(
-                key1, level_1_key))
+            logger.info("Level 1 keys matched ADDON {} == {}".format(key1, level_1_key))
             # Iterate through the 2nd level dicts in the value
             for key2, value2 in value1.items():
                 logger.info("----------------------------------")
                 # Match k with master dict keys - add if not present
                 for k1, v1 in master.items():
                     if isinstance(v1, dict) and k1 == level_1_key:
-                        logger.info("Level 1 keys matched MASTER "
-                                    "{} == {}".format(k1, level_1_key))
+                        logger.info(
+                            "Level 1 keys matched MASTER "
+                            "{} == {}".format(k1, level_1_key)
+                        )
                         flag = False
                         # Iterate through the 2nd level dicts in
                         # the value
@@ -110,17 +110,17 @@ def update_level_1_dict(master, add_on, level_1_key):
                             if key2 == k2:
                                 logger.info("Found matching keys")
                                 flag = False
-                                logger.info("Setting flag value to {}"
-                                            .format(flag))
+                                logger.info("Setting flag value to {}".format(flag))
                                 break
                             else:
                                 flag = True
                                 logger.info(
                                     "Add-on key not found in existing"
                                     " dict, setting flag value to {}"
-                                    " to update dict.".format(flag))
+                                    " to update dict.".format(flag)
+                                )
                         if flag:
-                            logger.info('Adding key {}'.format(key2))
+                            logger.info("Adding key {}".format(key2))
                             d2 = {key2: value2}
                             v1.update(d2)
                             logger.debug(master)
@@ -152,7 +152,7 @@ def update_template(master, add_on):
     return master
 
 
-def update_parameters(master, add_on, decision_key='ParameterKey'):
+def update_parameters(master, add_on, decision_key="ParameterKey"):
     logger.info("Merging parameter files.")
     m_list = _read_file(master)
     add_list = _read_file(add_on)
@@ -164,11 +164,16 @@ def update_parameters(master, add_on, decision_key='ParameterKey'):
                 for i in m_list:
                     logger.info(i.get(decision_key))
                     if item.get(decision_key) == i.get(decision_key):
-                        logger.info("Keys: '{}' matched, skipping"
-                                    .format(item.get(decision_key)))
+                        logger.info(
+                            "Keys: '{}' matched, skipping".format(
+                                item.get(decision_key)
+                            )
+                        )
                         flag = False
-                        logger.info("Setting flag value to {} and stopping"
-                                    " the loop.".format(flag))
+                        logger.info(
+                            "Setting flag value to {} and stopping"
+                            " the loop.".format(flag)
+                        )
                         break
                     else:
                         flag = True
@@ -181,7 +186,7 @@ def update_parameters(master, add_on, decision_key='ParameterKey'):
         return m_list
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) > 3:
         log_level = sys.argv[1]
         master_baseline_file = sys.argv[2]
@@ -196,8 +201,12 @@ if __name__ == '__main__':
         file_matcher(master_list, add_on_list)
 
     else:
-        print('No arguments provided. Please provide the existing and '
-              'new manifest files names.')
-        print('Example: merge_baseline_template_parameter.py <LOG-LEVEL>'
-              ' <MASTER_FILE_NAME> <ADD_ON_FILE_NAME>')
+        print(
+            "No arguments provided. Please provide the existing and "
+            "new manifest files names."
+        )
+        print(
+            "Example: merge_baseline_template_parameter.py <LOG-LEVEL>"
+            " <MASTER_FILE_NAME> <ADD_ON_FILE_NAME>"
+        )
         sys.exit(2)

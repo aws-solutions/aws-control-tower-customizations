@@ -16,6 +16,7 @@
 # !/bin/python
 
 from os import environ
+
 from botocore.exceptions import ClientError
 from cfct.aws.utils.boto3_session import Boto3Session
 from cfct.aws.utils.get_partition import get_partition
@@ -28,12 +29,14 @@ class AssumeRole(object):
             # assume role
             session_name = "custom-control-tower-session"
             partition = get_partition()
-            role_arn = "%s%s%s%s%s%s" % ("arn:",
-                                         partition,
-                                         ":iam::",
-                                         str(account),
-                                         ":role/",
-                                         environ.get('EXECUTION_ROLE_NAME'))
+            role_arn = "%s%s%s%s%s%s" % (
+                "arn:",
+                partition,
+                ":iam::",
+                str(account),
+                ":role/",
+                environ.get("EXECUTION_ROLE_NAME"),
+            )
             credentials = sts.assume_role(role_arn, session_name)
             return credentials
         except ClientError as e:
@@ -44,28 +47,26 @@ class AssumeRole(object):
 class STS(Boto3Session):
     def __init__(self, logger, **kwargs):
         self.logger = logger
-        __service_name = 'sts'
-        kwargs.update({'region': self.get_sts_region})
-        kwargs.update({'endpoint_url': self.get_sts_endpoint()})
+        __service_name = "sts"
+        kwargs.update({"region": self.get_sts_region})
+        kwargs.update({"endpoint_url": self.get_sts_endpoint()})
         super().__init__(logger, __service_name, **kwargs)
         self.sts_client = super().get_client()
 
     @property
     def get_sts_region(self):
-        return environ.get('AWS_REGION')
+        return environ.get("AWS_REGION")
 
     @staticmethod
     def get_sts_endpoint():
-        return "https://sts.%s.amazonaws.com" % environ.get('AWS_REGION')
+        return "https://sts.%s.amazonaws.com" % environ.get("AWS_REGION")
 
     def assume_role(self, role_arn, session_name, duration=900):
         try:
             response = self.sts_client.assume_role(
-                RoleArn=role_arn,
-                RoleSessionName=session_name,
-                DurationSeconds=duration
+                RoleArn=role_arn, RoleSessionName=session_name, DurationSeconds=duration
             )
-            return response['Credentials']
+            return response["Credentials"]
         except ClientError as e:
             self.logger.log_unhandled_exception(e)
             raise

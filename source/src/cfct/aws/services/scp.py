@@ -22,18 +22,16 @@ from cfct.aws.utils.boto3_session import Boto3Session
 class ServiceControlPolicy(Boto3Session):
     def __init__(self, logger, **kwargs):
         self.logger = logger
-        __service_name = 'organizations'
+        __service_name = "organizations"
         super().__init__(logger, __service_name, **kwargs)
         self.org_client = super().get_client()
 
     def list_policies(self, page_size=20):
         try:
-            paginator = self.org_client.get_paginator('list_policies')
+            paginator = self.org_client.get_paginator("list_policies")
             response_iterator = paginator.paginate(
-                Filter='SERVICE_CONTROL_POLICY',
-                PaginationConfig={
-                    'PageSize': page_size
-                }
+                Filter="SERVICE_CONTROL_POLICY",
+                PaginationConfig={"PageSize": page_size},
             )
             return response_iterator
         except ClientError as e:
@@ -42,14 +40,11 @@ class ServiceControlPolicy(Boto3Session):
 
     def list_policies_for_target(self, target_id, page_size=20):
         try:
-            paginator = self.org_client\
-                .get_paginator('list_policies_for_target')
+            paginator = self.org_client.get_paginator("list_policies_for_target")
             response_iterator = paginator.paginate(
                 TargetId=target_id,
-                Filter='SERVICE_CONTROL_POLICY',
-                PaginationConfig={
-                    'PageSize': page_size
-                }
+                Filter="SERVICE_CONTROL_POLICY",
+                PaginationConfig={"PageSize": page_size},
             )
             return response_iterator
         except ClientError as e:
@@ -58,13 +53,9 @@ class ServiceControlPolicy(Boto3Session):
 
     def list_targets_for_policy(self, policy_id, page_size=20):
         try:
-            paginator = self.org_client.get_paginator(
-                'list_targets_for_policy')
+            paginator = self.org_client.get_paginator("list_targets_for_policy")
             response_iterator = paginator.paginate(
-                PolicyId=policy_id,
-                PaginationConfig={
-                    'PageSize': page_size
-                }
+                PolicyId=policy_id, PaginationConfig={"PageSize": page_size}
             )
             return response_iterator
         except ClientError as e:
@@ -77,7 +68,7 @@ class ServiceControlPolicy(Boto3Session):
                 Content=content,
                 Description=description,
                 Name=name,
-                Type='SERVICE_CONTROL_POLICY'
+                Type="SERVICE_CONTROL_POLICY",
             )
             return response
         except ClientError as e:
@@ -87,10 +78,7 @@ class ServiceControlPolicy(Boto3Session):
     def update_policy(self, policy_id, name, description, content):
         try:
             response = self.org_client.update_policy(
-                PolicyId=policy_id,
-                Name=name,
-                Description=description,
-                Content=content
+                PolicyId=policy_id, Name=name, Description=description, Content=content
             )
             return response
         except ClientError as e:
@@ -99,25 +87,21 @@ class ServiceControlPolicy(Boto3Session):
 
     def delete_policy(self, policy_id):
         try:
-            self.org_client.delete_policy(
-                PolicyId=policy_id
-            )
+            self.org_client.delete_policy(PolicyId=policy_id)
         except ClientError as e:
             self.logger.log_unhandled_exception(e)
             raise
 
     def attach_policy(self, policy_id, target_id):
         try:
-            self.org_client.attach_policy(
-                PolicyId=policy_id,
-                TargetId=target_id
-            )
+            self.org_client.attach_policy(PolicyId=policy_id, TargetId=target_id)
         except ClientError as e:
-            if e.response['Error']['Code'] ==  \
-             'DuplicatePolicyAttachmentException':
-                self.logger.exception("Caught exception "
-                                      "'DuplicatePolicyAttachmentException', "
-                                      "taking no action...")
+            if e.response["Error"]["Code"] == "DuplicatePolicyAttachmentException":
+                self.logger.exception(
+                    "Caught exception "
+                    "'DuplicatePolicyAttachmentException', "
+                    "taking no action..."
+                )
                 return
             else:
                 self.logger.log_unhandled_exception(e)
@@ -125,15 +109,14 @@ class ServiceControlPolicy(Boto3Session):
 
     def detach_policy(self, policy_id, target_id):
         try:
-            self.org_client.detach_policy(
-                PolicyId=policy_id,
-                TargetId=target_id
-            )
+            self.org_client.detach_policy(PolicyId=policy_id, TargetId=target_id)
         except ClientError as e:
-            if e.response['Error']['Code'] == 'PolicyNotAttachedException':
-                self.logger.exception("Caught exception "
-                                      "'PolicyNotAttachedException',"
-                                      " taking no action...")
+            if e.response["Error"]["Code"] == "PolicyNotAttachedException":
+                self.logger.exception(
+                    "Caught exception "
+                    "'PolicyNotAttachedException',"
+                    " taking no action..."
+                )
                 return
             else:
                 self.logger.log_unhandled_exception(e)
@@ -142,15 +125,15 @@ class ServiceControlPolicy(Boto3Session):
     def enable_policy_type(self, root_id):
         try:
             self.org_client.enable_policy_type(
-                RootId=root_id,
-                PolicyType='SERVICE_CONTROL_POLICY'
+                RootId=root_id, PolicyType="SERVICE_CONTROL_POLICY"
             )
         except ClientError as e:
-            if e.response['Error']['Code'] ==  \
-             'PolicyTypeAlreadyEnabledException':
-                self.logger.exception("Caught "
-                                      "PolicyTypeAlreadyEnabledException',"
-                                      " taking no action...")
+            if e.response["Error"]["Code"] == "PolicyTypeAlreadyEnabledException":
+                self.logger.exception(
+                    "Caught "
+                    "PolicyTypeAlreadyEnabledException',"
+                    " taking no action..."
+                )
             else:
                 self.logger.log_unhandled_exception(e)
                 raise

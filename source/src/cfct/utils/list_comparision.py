@@ -14,7 +14,9 @@
 ###############################################################################
 
 from cfct.utils.logger import Logger
-logger = Logger('info')
+
+logger = Logger("info")
+
 
 def compare_lists(existing_list: list, new_list: list) -> bool:
     """Compares two list and return boolean flag if they match
@@ -38,5 +40,3 @@ def compare_lists(existing_list: list, new_list: list) -> bool:
     else:
         logger.info("Lists didn't match.")
         return False
-
-

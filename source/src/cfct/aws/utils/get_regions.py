@@ -17,7 +17,7 @@ import boto3
 
 
 def get_available_regions(service_name):
-    """ Returns list of available regions given an AWS service.
+    """Returns list of available regions given an AWS service.
 
     Args: service_name
 

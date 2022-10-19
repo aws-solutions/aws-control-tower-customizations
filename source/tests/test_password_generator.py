@@ -12,14 +12,15 @@
 #  KIND, express or implied. See the License for the specific language       #
 #  governing permissions  and limitations under the License.                 #
 ##############################################################################
-from cfct.utils import password_generator
 import re
+
 import pytest
+from cfct.utils import password_generator
+
 
 @pytest.mark.unit
 def test_random_pwd_generator():
-    random_pwd_no_additional_string = \
-        password_generator.random_pwd_generator(10, 'a')
-    assert len(re.sub('([^0-9])','',random_pwd_no_additional_string)) >= 2
+    random_pwd_no_additional_string = password_generator.random_pwd_generator(10, "a")
+    assert len(re.sub("([^0-9])", "", random_pwd_no_additional_string)) >= 2
     assert random_pwd_no_additional_string[8:] == "aa"
     assert len(random_pwd_no_additional_string) == 10

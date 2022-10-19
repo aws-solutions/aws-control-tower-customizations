@@ -15,17 +15,19 @@
 
 # !/bin/python
 import inspect
+
 from botocore.exceptions import ClientError
 from cfct.aws.utils.boto3_session import Boto3Session
 
 
 class CodePipeline(Boto3Session):
     """This class make code pipeline API calls such as starts code pipeline
-       execution, etc.
+    execution, etc.
     """
+
     def __init__(self, logger, **kwargs):
         self.logger = logger
-        __service_name = 'codepipeline'
+        __service_name = "codepipeline"
         super().__init__(logger, __service_name, **kwargs)
         self.code_pipeline = super().get_client()
 

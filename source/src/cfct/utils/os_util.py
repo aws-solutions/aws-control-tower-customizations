@@ -30,18 +30,14 @@ def make_dir(directory, logger=None):
     try:
         os.stat(directory)
         if logger is None:
-            print("\n Directory {} already exist... skipping"
-                  .format(directory))
+            print("\n Directory {} already exist... skipping".format(directory))
         else:
-            logger.info("Directory {} already exist... skipping"
-                        .format(directory))
+            logger.info("Directory {} already exist... skipping".format(directory))
     except OSError:
         if logger is None:
-            print("\n Directory {} not found, creating now..."
-                  .format(directory))
+            print("\n Directory {} not found, creating now...".format(directory))
         else:
-            logger.info("Directory {} not found, creating now..."
-                        .format(directory))
+            logger.info("Directory {} not found, creating now...".format(directory))
         os.makedirs(directory)
 
 
@@ -58,16 +54,18 @@ def remove_dir(directory, logger=None):
     try:
         os.stat(directory)
         if logger is None:
-            print("\n Directory {} already exist, deleting open-source"
-                  " directory".format(directory))
+            print(
+                "\n Directory {} already exist, deleting open-source"
+                " directory".format(directory)
+            )
         else:
-            logger.info("\n Directory {} already exist, deleting open-source"
-                        " directory".format(directory))
+            logger.info(
+                "\n Directory {} already exist, deleting open-source"
+                " directory".format(directory)
+            )
         shutil.rmtree(directory)
     except OSError:
         if logger is None:
-            print("\n Directory {} not found... nothing to delete"
-                  .format(directory))
+            print("\n Directory {} not found... nothing to delete".format(directory))
         else:
-            logger.info("Directory {} not found... nothing to delete"
-                        .format(directory))
+            logger.info("Directory {} not found... nothing to delete".format(directory))

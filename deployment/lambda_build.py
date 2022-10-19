@@ -16,9 +16,9 @@
 # !/usr/bin/env python3
 import glob
 import os
-import sys
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 LIB_PATH = "source/src"
@@ -32,7 +32,7 @@ LAMBDA_BUILD_MAPPING = {
     "deployment_lambda": "custom-control-tower-config-deployer",
     "build_scripts": "custom-control-tower-scripts",
     "lifecycle_event_handler": "custom-control-tower-lifecycle-event-handler",
-    "state_machine_trigger": "custom-control-tower-state-machine-trigger"
+    "state_machine_trigger": "custom-control-tower-state-machine-trigger",
 }
 
 
@@ -92,7 +92,12 @@ def main(argv):
     else:
         os.makedirs(S3_OUTPUT_PATH, exist_ok=True)
         print(" Installing dependencies...")
-        install_dependencies(dist_folder=DIST_PATH, lib_path=LIB_PATH, handlers_path=HANDLERS_PATH, codebuild_script_path=CODEBUILD_SCRIPTS_PATH)
+        install_dependencies(
+            dist_folder=DIST_PATH,
+            lib_path=LIB_PATH,
+            handlers_path=HANDLERS_PATH,
+            codebuild_script_path=CODEBUILD_SCRIPTS_PATH,
+        )
 
         for arg in argv:
             if arg in LAMBDA_BUILD_MAPPING:
@@ -112,7 +117,9 @@ def main(argv):
 
             print(f" Creating archive for {zip_file_name}..")
             create_lambda_archive(
-                zip_file_name=zip_file_name, source=DIST_PATH, output_path=S3_OUTPUT_PATH
+                zip_file_name=zip_file_name,
+                source=DIST_PATH,
+                output_path=S3_OUTPUT_PATH,
             )
 
 

@@ -35,8 +35,7 @@ class InputBuilder(StateMachineInput):
 
     """
 
-    def __init__(self, resource_properties, request_type='Create',
-                 skip_stack_set='no'):
+    def __init__(self, resource_properties, request_type="Create", skip_stack_set="no"):
         self._request_type = request_type
         self._resource_properties = resource_properties
         self._skip_stack_set = skip_stack_set
@@ -44,9 +43,9 @@ class InputBuilder(StateMachineInput):
     def input_map(self) -> dict:
         input_map = {
             "RequestType": self._request_type,
-            "ResourceProperties": self._resource_properties
+            "ResourceProperties": self._resource_properties,
         }
-        if getenv('STAGE_NAME').upper() == 'STACKSET':
+        if getenv("STAGE_NAME").upper() == "STACKSET":
             input_map.update({"SkipUpdateStackSet": self._skip_stack_set})
         return input_map
 
@@ -67,9 +66,17 @@ class SCPResourceProperties:
 
     """
 
-    def __init__(self, policy_name, policy_description, policy_url, ou_list,
-                 policy_list=None, account_id='', operation='',
-                 ou_name_delimiter=':'):
+    def __init__(
+        self,
+        policy_name,
+        policy_description,
+        policy_url,
+        ou_list,
+        policy_list=None,
+        account_id="",
+        operation="",
+        ou_name_delimiter=":",
+    ):
         self._policy_name = policy_name
         self._policy_description = policy_description
         self._policy_url = policy_url
@@ -86,38 +93,46 @@ class SCPResourceProperties:
             "PolicyList": self._policy_list,
             "Operation": self._operation,
             "OUList": self._ou_list,
-            "OUNameDelimiter": self._ou_name_delimiter
+            "OUNameDelimiter": self._ou_name_delimiter,
         }
 
     def _get_policy_document(self):
         return {
             "Name": self._policy_name,
             "Description": self._policy_description,
-            "PolicyURL": self._policy_url
+            "PolicyURL": self._policy_url,
         }
 
 
 class StackSetResourceProperties:
     """
-        This class helps create and return input needed to execute Stack Set
-        state machine. This also defines the required keys to execute the state
-        machine.
+    This class helps create and return input needed to execute Stack Set
+    state machine. This also defines the required keys to execute the state
+    machine.
 
-        Example:
+    Example:
 
-        resource_properties = StackSetResourceProperties(stack_set_name,
-                                                     template_url,
-                                                     parameters,
-                                                     capabilities,
-                                                     account_list,
-                                                     region_list,
-                                                     ssm_parameters)
-        ss_input = InputBuilder(resource_properties.get_stack_set_input_map())
-        sm_input = ss_input.input_map()
-        """
+    resource_properties = StackSetResourceProperties(stack_set_name,
+                                                 template_url,
+                                                 parameters,
+                                                 capabilities,
+                                                 account_list,
+                                                 region_list,
+                                                 ssm_parameters)
+    ss_input = InputBuilder(resource_properties.get_stack_set_input_map())
+    sm_input = ss_input.input_map()
+    """
 
-    def __init__(self, stack_set_name, template_url, parameters,
-                 capabilities, account_list, region_list, ssm_parameters):
+    def __init__(
+        self,
+        stack_set_name,
+        template_url,
+        parameters,
+        capabilities,
+        account_list,
+        region_list,
+        ssm_parameters,
+    ):
         self._stack_set_name = stack_set_name
         self._template_url = template_url
         self._parameters = parameters
@@ -134,7 +149,7 @@ class StackSetResourceProperties:
             "Parameters": self._get_cfn_parameters(),
             "AccountList": self._get_account_list(),
             "RegionList": self._get_region_list(),
-            "SSMParameters": self._get_ssm_parameters()
+            "SSMParameters": self._get_ssm_parameters(),
         }
 
     def _get_cfn_parameters(self):

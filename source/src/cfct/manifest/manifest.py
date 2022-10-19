@@ -14,8 +14,7 @@
 ##############################################################################
 
 import yorm
-from yorm.types import String, Boolean
-from yorm.types import List, AttributeDictionary
+from yorm.types import AttributeDictionary, Boolean, List, String
 
 
 @yorm.attr(name=String)
@@ -113,8 +112,7 @@ class CfnResourcesList(List):
 @yorm.attr(description=String)
 @yorm.attr(apply_to_accounts_in_ou=ApplyToOUList)
 class Policy(AttributeDictionary):
-    def __init__(self, name, policy_file, description,
-                 apply_to_accounts_in_ou):
+    def __init__(self, name, policy_file, description, apply_to_accounts_in_ou):
         super().__init__()
         self.name = name
         self.description = description
@@ -137,8 +135,17 @@ class PolicyList(List):
 @yorm.attr(deployment_targets=DeployTargets)
 @yorm.attr(parameters=Parameters)
 class ResourceProps(AttributeDictionary):
-    def __init__(self, name, resource_file, parameters, parameter_file,
-                 deploy_method, deployment_targets, export_outputs, regions):
+    def __init__(
+        self,
+        name,
+        resource_file,
+        parameters,
+        parameter_file,
+        deploy_method,
+        deployment_targets,
+        export_outputs,
+        regions,
+    ):
         super().__init__()
         self.name = name
         self.resource_file = resource_file

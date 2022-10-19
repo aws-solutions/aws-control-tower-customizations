@@ -15,7 +15,7 @@
 
 # !/bin/python
 import json
-from datetime import datetime, date
+from datetime import date, datetime
 
 
 class DateTimeEncoder(json.JSONEncoder):

@@ -7,9 +7,13 @@ with open("../../README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 
+with open("../../VERSION", "r", encoding="utf-8") as version_file:
+    version = version_file.read()
+
+
 setuptools.setup(
     name="cfct",
-    version="2.3.0",
+    version=version,
     author="AWS",
     description="Customizations for Control Tower",
     long_description=long_description,
@@ -42,7 +46,7 @@ setuptools.setup(
             "pytest == 6.2.4",
             "mypy == 0.930",
             "expecter==0.3.0",
-            "pykwalify == 1.8.0"
+            "pykwalify == 1.8.0",
         ],
         "dev": [
             "ipython",

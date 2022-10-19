@@ -20,12 +20,12 @@ def get_partition():
     """
     :return: partition name for the current AWS region
     """
-    region_name = environ.get('AWS_REGION')
-    china_region_name_prefix = 'cn'
-    us_gov_cloud_region_name_prefix = 'us-gov'
-    aws_regions_partition = 'aws'
-    aws_china_regions_partition = 'aws-cn'
-    aws_us_gov_cloud_regions_partition = 'aws-us-gov'
+    region_name = environ.get("AWS_REGION")
+    china_region_name_prefix = "cn"
+    us_gov_cloud_region_name_prefix = "us-gov"
+    aws_regions_partition = "aws"
+    aws_china_regions_partition = "aws-cn"
+    aws_us_gov_cloud_regions_partition = "aws-us-gov"
 
     # China regions
     if region_name.startswith(china_region_name_prefix):

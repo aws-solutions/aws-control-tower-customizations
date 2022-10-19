@@ -1,4 +1,3 @@
-
 ##############################################################################
 #  Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.   #
 #                                                                            #
@@ -14,14 +13,16 @@
 #  governing permissions  and limitations under the License.                 #
 ##############################################################################
 
-import os
 import inspect
-from cfct.utils.logger import Logger
+import os
+
 from cfct.aws.services.code_pipeline import CodePipeline
+from cfct.utils.logger import Logger
 
 # initialise logger
-log_level = 'info' if os.environ.get('LOG_LEVEL') is None \
-            else os.environ.get('LOG_LEVEL')
+log_level = (
+    "info" if os.environ.get("LOG_LEVEL") is None else os.environ.get("LOG_LEVEL")
+)
 logger = Logger(loglevel=log_level)
 init_failed = False
 
@@ -42,22 +43,25 @@ def invoke_code_pipeline(event):
         response from starting pipeline execution
     """
     msg_count = 0
-    for record in event['Records']:
+    for record in event["Records"]:
         # Here validates that the event source is aws control tower.
         # The filtering of specific control tower lifecycle events is done
         # by a CWE rule, which is configured to deliver only
         # the matching events to the SQS queue.
-        if record['body'] is not None and record['body'].find('"source":"aws.controltower"') >= 0:
+        if (
+            record["body"] is not None
+            and record["body"].find('"source":"aws.controltower"') >= 0
+        ):
             msg_count += 1
 
     if msg_count > 0:
-        logger.info(str(msg_count) +
-                    " Control Tower lifecycle event(s) found in the queue."
-                    " Start invoking code pipeline...")
+        logger.info(
+            str(msg_count) + " Control Tower lifecycle event(s) found in the queue."
+            " Start invoking code pipeline..."
+        )
 
         cp = CodePipeline(logger)
-        response = cp.start_pipeline_execution(
-                    os.environ.get('CODE_PIPELINE_NAME'))
+        response = cp.start_pipeline_execution(os.environ.get("CODE_PIPELINE_NAME"))
     else:
         logger.info("No lifecycle events in the queue!")
 
@@ -75,8 +79,9 @@ def lambda_handler(event, context):
         context
     """
     try:
-        logger.info("<<<<<<<<<< Poll Control Tower lifecyle events from"
-                    " SQS queue >>>>>>>>>>")
+        logger.info(
+            "<<<<<<<<<< Poll Control Tower lifecyle events from" " SQS queue >>>>>>>>>>"
+        )
         logger.info(event)
         logger.debug(context)
 
@@ -85,6 +90,5 @@ def lambda_handler(event, context):
         logger.info("Response from Code Pipeline: ")
         logger.info(response)
     except Exception as e:
-        logger.log_general_exception(
-            __file__.split('/')[-1], inspect.stack()[0][3], e)
+        logger.log_general_exception(__file__.split("/")[-1], inspect.stack()[0][3], e)
         raise

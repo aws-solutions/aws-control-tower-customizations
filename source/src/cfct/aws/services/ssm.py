@@ -15,51 +15,54 @@
 
 # !/bin/python
 import os
-from botocore.exceptions import ClientError
-from cfct.utils.retry_decorator import try_except_retry
-from cfct.aws.utils.boto3_session import Boto3Session
 
-ssm_region = os.environ.get('AWS_REGION')
+from botocore.exceptions import ClientError
+from cfct.aws.utils.boto3_session import Boto3Session
+from cfct.utils.retry_decorator import try_except_retry
+
+ssm_region = os.environ.get("AWS_REGION")
 
 
 class SSM(Boto3Session):
     def __init__(self, logger, region=ssm_region, **kwargs):
         self.logger = logger
-        __service_name = 'ssm'
-        kwargs.update({'region': region})
+        __service_name = "ssm"
+        kwargs.update({"region": region})
         super().__init__(logger, __service_name, **kwargs)
         self.ssm_client = super().get_client()
         self.description = "This value was stored by Custom Control "
         "Tower Solution."
 
-    def put_parameter(self,
-                      name,
-                      value,
-                      description="This value was stored by Custom Control "
-                                  "Tower Solution.",
-                      type='String',
-                      overwrite=True):
+    def put_parameter(
+        self,
+        name,
+        value,
+        description="This value was stored by Custom Control " "Tower Solution.",
+        type="String",
+        overwrite=True,
+    ):
         try:
             response = self.ssm_client.put_parameter(
                 Name=name,
                 Value=value,
                 Description=description,
                 Type=type,
-                Overwrite=overwrite
+                Overwrite=overwrite,
             )
             return response
         except ClientError as e:
             self.logger.log_unhandled_exception(e)
             raise
 
-    def put_parameter_use_cmk(self,
-                              name,
-                              value,
-                              key_id,
-                              description="This value was stored by Custom "
-                                          "Control Tower Solution.",
-                              type='SecureString',
-                              overwrite=True):
+    def put_parameter_use_cmk(
+        self,
+        name,
+        value,
+        key_id,
+        description="This value was stored by Custom " "Control Tower Solution.",
+        type="SecureString",
+        overwrite=True,
+    ):
         try:
             response = self.ssm_client.put_parameter(
                 Name=name,
@@ -67,7 +70,7 @@ class SSM(Boto3Session):
                 Description=description,
                 KeyId=key_id,
                 Type=type,
-                Overwrite=overwrite
+                Overwrite=overwrite,
             )
             return response
         except ClientError as e:
@@ -76,14 +79,13 @@ class SSM(Boto3Session):
 
     def get_parameter(self, name):
         try:
-            response = self.ssm_client.get_parameter(
-                Name=name,
-                WithDecryption=True
-            )
-            return response.get('Parameter', {}).get('Value')
+            response = self.ssm_client.get_parameter(Name=name, WithDecryption=True)
+            return response.get("Parameter", {}).get("Value")
         except ClientError as e:
-            if e.response['Error']['Code'] == 'ParameterNotFound':
-                self.logger.log_unhandled_exception('The SSM Parameter {} was not found'.format(name))
+            if e.response["Error"]["Code"] == "ParameterNotFound":
+                self.logger.log_unhandled_exception(
+                    "The SSM Parameter {} was not found".format(name)
+                )
             self.logger.log_unhandled_exception(e)
             raise
 
@@ -101,22 +103,22 @@ class SSM(Boto3Session):
     def get_parameters_by_path(self, path):
         try:
             response = self.ssm_client.get_parameters_by_path(
-                Path=path if path.startswith('/') else '/'+path,
+                Path=path if path.startswith("/") else "/" + path,
                 Recursive=False,
-                WithDecryption=True
+                WithDecryption=True,
             )
-            params_list = response.get('Parameters', [])
-            next_token = response.get('NextToken', None)
+            params_list = response.get("Parameters", [])
+            next_token = response.get("NextToken", None)
 
             while next_token is not None:
                 response = self.ssm_client.get_parameters_by_path(
-                    Path=path if path.startswith('/') else '/' + path,
+                    Path=path if path.startswith("/") else "/" + path,
                     Recursive=False,
                     WithDecryption=True,
-                    NextToken=next_token
+                    NextToken=next_token,
                 )
-                params_list.extend(response.get('Parameters', []))
-                next_token = response.get('NextToken', None)
+                params_list.extend(response.get("Parameters", []))
+                next_token = response.get("NextToken", None)
 
             return params_list
         except ClientError as e:
@@ -128,7 +130,7 @@ class SSM(Boto3Session):
             params_list = self.get_parameters_by_path(name)
             if params_list:
                 for param in params_list:
-                    self.delete_parameter(param.get('Name'))
+                    self.delete_parameter(param.get("Name"))
         except ClientError as e:
             self.logger.log_unhandled_exception(e)
             raise
@@ -139,13 +141,13 @@ class SSM(Boto3Session):
             response = self.ssm_client.describe_parameters(
                 ParameterFilters=[
                     {
-                        'Key': 'Name',
-                        'Option': 'BeginsWith' if begins_with else 'Equals',
-                        'Values': [parameter_name]
+                        "Key": "Name",
+                        "Option": "BeginsWith" if begins_with else "Equals",
+                        "Values": [parameter_name],
                     }
                 ]
             )
-            parameters = response.get('Parameters', [])
+            parameters = response.get("Parameters", [])
             if parameters:
                 return parameters[0]
             else:
