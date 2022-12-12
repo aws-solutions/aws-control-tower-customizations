@@ -570,7 +570,7 @@ Resources:
                   - Name: LOG_LEVEL
                     Value: !FindInMap [LambdaFunction, Logging, Level]
                   - Name: WAIT_TIME
-                    Value: "30"
+                    Value: "15"
                   - Name: KMS_KEY_ALIAS_NAME
                     Value: !FindInMap [KMS, Alias, Name]
                   - Name: SOLUTION_ID
@@ -690,7 +690,7 @@ Resources:
                   - Name: LOG_LEVEL
                     Value: !FindInMap [LambdaFunction, Logging, Level]
                   - Name: WAIT_TIME
-                    Value: "30"
+                    Value: "15"
                   - Name: STAGE_NAME
                     Value: "scp"
                   - Name: ARTIFACT_BUCKET
@@ -866,7 +866,7 @@ Resources:
                   - Name: LOG_LEVEL
                     Value: !FindInMap [LambdaFunction, Logging, Level]
                   - Name: WAIT_TIME
-                    Value: "30"
+                    Value: "15"
                   - Name: STAGE_NAME
                     Value: "stackset"
                   - Name: ARTIFACT_BUCKET

@@ -37,7 +37,6 @@ class SMExecutionManager:
         self.logger = logger
         self.sm_input_list = sm_input_list
         self.list_sm_exec_arns = []
-        self.stack_set_exist = True
         self.solution_metrics = SolutionMetrics(logger)
         self.param_handler = CFNParamsHandler(logger)
         self.state_machine = StateMachine(logger)
@@ -68,9 +67,11 @@ class SMExecutionManager:
             if is_deletion:
                 start_execution_flag = True
             else:
-                template_matched, parameters_matched = self.compare_template_and_params(
-                    sm_input, stack_set_name
-                )
+                (
+                    template_matched,
+                    parameters_matched,
+                    stack_set_exist,
+                ) = self.compare_template_and_params(sm_input, stack_set_name)
 
                 self.logger.info(
                     "Stack Set Name: {} | "
@@ -80,7 +81,10 @@ class SMExecutionManager:
                     )
                 )
 
-                if template_matched and parameters_matched and self.stack_set_exist:
+                stackset_unchanged = all(
+                    [template_matched, parameters_matched, stack_set_exist]
+                )
+                if stackset_unchanged:
                     start_execution_flag = self.compare_stack_instances(
                         sm_input, stack_set_name
                     )
@@ -97,10 +101,14 @@ class SMExecutionManager:
                 sm_exec_arn = self.setup_execution(updated_sm_input, sm_exec_name)
                 self.list_sm_exec_arns.append(sm_exec_arn)
 
+                # In sequential mode, monitor 1 execution at a time
                 (
                     status,
                     failed_execution_list,
-                ) = self.monitor_state_machines_execution_status()
+                ) = self.monitor_state_machines_execution_status(
+                    sm_execution_arns=[sm_exec_arn], retry_wait_time=self.wait_time
+                )
+
                 if status == "FAILED":
                     return status, failed_execution_list
 
@@ -133,7 +141,9 @@ class SMExecutionManager:
             self.list_sm_exec_arns.append(sm_exec_arn)
             time.sleep(int(self.wait_time))
         # monitor execution status
-        status, failed_execution_list = self.monitor_state_machines_execution_status()
+        status, failed_execution_list = self.monitor_state_machines_execution_status(
+            sm_execution_arns=self.list_sm_exec_arns, retry_wait_time=self.wait_time
+        )
         return status, failed_execution_list
 
     @staticmethod
@@ -186,6 +196,8 @@ class SMExecutionManager:
     def compare_template_and_params(self, sm_input, stack_name):
 
         self.logger.info("Comparing the templates and parameters.")
+        # Assume that the stack exists, but is not the same state
+        stack_set_exist = True
         template_compare, params_compare = False, False
         if stack_name:
             describe_response = self.stack_set.describe_stack_set(stack_name)
@@ -195,12 +207,12 @@ class SMExecutionManager:
             if describe_response is not None:
                 self.logger.info("Found existing stack set.")
 
-                operation_status_flag = self.get_stack_set_operation_status(stack_name)
-
-                if operation_status_flag:
+                # Check that the last status was successful
+                if self.get_stack_set_operation_status(stack_name):
                     self.logger.info("Continuing...")
                 else:
-                    return operation_status_flag, operation_status_flag
+                    # StackSet status was not success
+                    return template_compare, params_compare, stack_set_exist
 
                 # Compare template copy - START
                 self.logger.info(
@@ -226,7 +238,7 @@ class SMExecutionManager:
                         "is empty. Check state_machine_event"
                         ":{}".format(sm_input)
                     )
-                    return False, False
+                    return template_compare, params_compare, stack_set_exist
 
                 cfn_template_file = tempfile.mkstemp()[1]
                 with open(cfn_template_file, "w") as f:
@@ -260,14 +272,14 @@ class SMExecutionManager:
                     )
                 )
             else:
+                # Stack set did not exist
                 self.logger.info(
                     "Stack Set does not exist. " "Creating a new stack set ...."
                 )
                 template_compare, params_compare = True, True
-                # set this flag to create the stack set
-                self.stack_set_exist = False
+                stack_set_exist = False
 
-        return template_compare, params_compare
+        return template_compare, params_compare, stack_set_exist
 
     def get_stack_set_operation_status(self, stack_name):
         self.logger.info(
@@ -350,40 +362,29 @@ class SMExecutionManager:
             self.logger.info("Stack instance(s) creation or deletion needed.")
             return True
 
-    def monitor_state_machines_execution_status(self):
-        if self.list_sm_exec_arns:
-            final_status = "RUNNING"
+    def monitor_state_machines_execution_status(
+        self, sm_execution_arns: list, retry_wait_time: int
+    ):
 
-            while final_status == "RUNNING":
-                for sm_exec_arn in self.list_sm_exec_arns:
-                    status = self.state_machine.check_state_machine_status(sm_exec_arn)
-                    if status == "RUNNING":
-                        final_status = "RUNNING"
-                        time.sleep(int(self.wait_time))
-                        break
-                    else:
-                        final_status = "COMPLETED"
+        # Assume we succeed until a failure is observed
+        overall_status = "SUCCEEDED"
+        failed_executions = []
 
-            err_flag = False
-            failed_sm_execution_list = []
-            for sm_exec_arn in self.list_sm_exec_arns:
-                status = self.state_machine.check_state_machine_status(sm_exec_arn)
-                if status == "SUCCEEDED":
-                    continue
-                else:
-                    failed_sm_execution_list.append(sm_exec_arn)
-                    err_flag = True
+        for exec_arn in sm_execution_arns:
+            # Check-sleep cycle until the execution finishes
+            exec_status = self.state_machine.check_state_machine_status(exec_arn)
+            while exec_status == "RUNNING":
+                time.sleep(int(retry_wait_time))
+                exec_status = self.state_machine.check_state_machine_status(exec_arn)
 
-            if err_flag:
-                return "FAILED", failed_sm_execution_list
+            if exec_status == "SUCCEEDED":
+                continue
             else:
-                return "SUCCEEDED", []
-        else:
-            self.logger.info(
-                "SM Execution List {} is empty, nothing to "
-                "monitor.".format(self.list_sm_exec_arns)
-            )
-            return None, []
+                # One observed failure -> report overall failure
+                overall_status = "FAILED"
+                failed_executions.append(exec_arn)
+
+        return overall_status, failed_executions
 
     def enforce_stack_set_deployment_successful(self, stack_set_name: str) -> None:
         failed_detailed_statuses = ["CANCELLED", "FAILED", "INOPERABLE"]
