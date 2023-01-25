@@ -14,7 +14,7 @@ chmod +x ./deployment/run-unit-tests.sh
 ``` 
 
 ## Building the customized solution
-* Building the solution from source requires Python 3.6 or higher
+* Building the solution from source requires Python 3.8 or higher
 * Configure the solution name, version number and bucket name of your target Amazon S3 distribution bucket 
 
 ``` 
