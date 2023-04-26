@@ -256,7 +256,6 @@ Resources:
           - id: W35
             reason: "This S3 bucket is used as the destination for 'CustomControlTowerPipelineS3Bucket' and 'CustomControlTowerPipelineArtifactS3Bucket'"
     Properties:
-      AccessControl: LogDeliveryWrite
       VersioningConfiguration:
         Status: Enabled
       BucketEncryption:
@@ -279,7 +278,31 @@ Resources:
             Effect: Deny
             Principal: "*"
             Action: s3:DeleteBucket
-            Resource: !Sub arn:${AWS::Partition}:s3:::${CustomControlTowerS3AccessLogsBucket}
+            Resource: !Sub "arn:${AWS::Partition}:s3:::${CustomControlTowerS3AccessLogsBucket}"
+          - Sid: EnableS3AccessLoggingForPipelineS3Bucket
+            Effect: Allow
+            Principal:
+              Service: logging.s3.amazonaws.com
+            Action:
+              - s3:PutObject
+            Resource: !Sub "arn:${AWS::Partition}:s3:::${CustomControlTowerS3AccessLogsBucket}/*"
+            Condition:
+              ArnLike:
+                "aws:SourceArn": !Sub "arn:${AWS::Partition}:s3:::${CustomControlTowerPipelineS3Bucket}"
+              StringEquals:
+                "aws:SourceAccount": !Ref AWS::AccountId
+          - Sid: EnableS3AccessLoggingForPipelineArtifactS3Bucket
+            Effect: Allow
+            Principal:
+              Service: logging.s3.amazonaws.com
+            Action:
+              - s3:PutObject
+            Resource: !Sub "arn:${AWS::Partition}:s3:::${CustomControlTowerS3AccessLogsBucket}/*"
+            Condition:
+              ArnLike:
+                "aws:SourceArn": !Sub "arn:${AWS::Partition}:s3:::${CustomControlTowerPipelineArtifactS3Bucket}"
+              StringEquals:
+                "aws:SourceAccount": !Ref AWS::AccountId
 
   CustomControlTowerCodeCommit:
     Type: AWS::CodeCommit::Repository
