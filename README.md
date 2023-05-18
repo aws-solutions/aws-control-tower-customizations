@@ -15,13 +15,14 @@ chmod +x ./deployment/run-unit-tests.sh
 
 ## Building the customized solution
 * Building the solution from source requires Python 3.6 or higher
-* Configure the solution name, version number and bucket name of your target Amazon S3 distribution bucket 
+* Configure the solution name, version number, bucket name and (optional) opt-in region support of your target Amazon S3 distribution bucket 
 
 ``` 
 export DIST_OUTPUT_BUCKET_PREFIX=my-bucket-prefix # Prefix for the S3 bucket where customized code will be stored 
 export TEMPLATE_OUTPUT_BUCKET=my-bucket-name # Name for the S3 bucket where the template will be stored
 export SOLUTION_NAME=my-solution-name # name of the solution (e.g. customizations-for-aws-control-tower)
 export VERSION=my-version # version number for the customized code  (e.g. 2.1.0)
+export ENABLE_OPT_IN_REGION_SUPPORT=true # Optional flag to build with opt-in region support
 ```
 
 * Update pip version to latest
@@ -33,7 +34,7 @@ python3 -m pip install -U pip
 * Now build the distributable
 ``` 
 chmod +x ./deployment/build-s3-dist.sh
-./deployment/build-s3-dist.sh $DIST_OUTPUT_BUCKET_PREFIX $TEMPLATE_OUTPUT_BUCKET $SOLUTION_NAME $VERSION
+./deployment/build-s3-dist.sh $DIST_OUTPUT_BUCKET_PREFIX $TEMPLATE_OUTPUT_BUCKET $SOLUTION_NAME $VERSION $ENABLE_OPT_IN_REGION_SUPPORT
 ``` 
  
 * Upload the distributable to an Amazon S3 bucket in your account.

@@ -2,10 +2,10 @@
 # This assumes all of the OS-level configuration has been completed and git repo has already been cloned         
 #
 # Usage: This script should be executed from the package root directory
-# ./deployment/build-s3-dist.sh source-bucket-base-name template-bucket-base-name trademarked-solution-name version-code
+# ./deployment/build-s3-dist.sh source-bucket-base-name template-bucket-base-name trademarked-solution-name version-code enable-opt-in-region-support
 #
 # Parameters:                                                                                                   
-#  - source-bucket-base-name: Name for the S3 bucket location where the template will source the Lambda          
+# - source-bucket-base-name: Name for the S3 bucket location where the template will source the Lambda          
 #    code from. The template will append '-[region_name]' to this bucket name.                                   
 #    For example: ./build-s3-dist.sh solutions template-bucket my-solution v1.0.0                                              
 #    The template will then expect the source code to be located in the solutions-[region_name] bucket           
@@ -14,15 +14,18 @@
 #  
 # - trademarked-solution-name: name of the solution for consistency                                             
 #                                                                                                                
-#  - version-code: version of the package
+# - version-code: version of the package
+#
+# - enable-opt-in-region-support: (Optional Boolean) Flag to enable opt-in region support. Pass `true` to set this argument.
+
 
 # Hard exit on failure
 set -e
 
 # Check to see if input has been provided:                                                                       
-if [ $# != 4 ]; then
-    echo "Please provide the base source bucket name, template-bucket, trademark approved solution name, and version"
-    echo "For example: ./deployment/build-s3-dist.sh solutions template-bucket trademarked-solution-name v1.0.0"
+if [ $# -lt 4 ]; then
+    echo "Please provide the base source bucket name, template-bucket, trademark approved solution name, version and (Optional) enable-opt-in-region-support flag"
+    echo "For example: ./deployment/build-s3-dist.sh solutions template-bucket trademarked-solution-name v1.0.0 true"
     exit 1
 fi
 
@@ -34,6 +37,17 @@ CODE_BUCKET_NAME=$1
 TEMPLATE_BUCKET_NAME=$2
 SOLUTION_NAME=$3
 VERSION_NUMBER=$4
+ENABLE_OPT_IN_REGION_SUPPORT=$5
+
+# Handle opt-in region builds in backwards compatible way,
+# Requires customer to set IS_OPT_IN_REGION parameter 
+SCRIPT_BUCKET_NAME=$(echo "${TEMPLATE_BUCKET_NAME}")
+DISTRIBUTION_BUCKET_NAME=$(echo "${TEMPLATE_BUCKET_NAME}")
+if [[ "${ENABLE_OPT_IN_REGION_SUPPORT}" = "true" ]]; then
+  echo "Building with opt-in region support"
+  SCRIPT_BUCKET_NAME+='-${AWS_REGION}' # Regionalized Buildspec
+  DISTRIBUTION_BUCKET_NAME+='-${AWS::Region}' # Regionalized CFN Template
+fi
 
  echo "------------------------------------------------------------------------------"
  echo "[Init] Clean old dist and recreate directories"
@@ -68,8 +82,13 @@ replace="s/%DIST_BUCKET_NAME%/$CODE_BUCKET_NAME/g"
 echo "sed -i -e $replace $template_dist_dir/custom-control-tower-initiation.template"
 sed -i -e "$replace" "$template_dist_dir"/custom-control-tower-initiation.template
 
-echo -e "\n Updating template bucket in the template with $TEMPLATE_BUCKET_NAME"
-replace="s/%TEMPLATE_BUCKET_NAME%/$TEMPLATE_BUCKET_NAME/g"
+echo -e "\n Updating template bucket in the template with $DISTRIBUTION_BUCKET_NAME"
+replace="s/%TEMPLATE_BUCKET_NAME%/$DISTRIBUTION_BUCKET_NAME/g"
+echo "sed -i -e $replace $template_dist_dir/custom-control-tower-initiation.template"
+sed -i -e "$replace" "$template_dist_dir"/custom-control-tower-initiation.template
+
+echo -e "\n Updating template bucket in the template with $SCRIPT_BUCKET_NAME"
+replace="s/%SCRIPT_BUCKET_NAME%/$SCRIPT_BUCKET_NAME/g"
 echo "sed -i -e $replace $template_dist_dir/custom-control-tower-initiation.template"
 sed -i -e "$replace" "$template_dist_dir"/custom-control-tower-initiation.template
 
@@ -93,23 +112,30 @@ zip -Xr "$build_dist_dir"/custom-control-tower-configuration.zip ./*
 echo -e "\n*** Build regional config zip file"
 # Support all regions in https://docs.aws.amazon.com/controltower/latest/userguide/region-how.html + GovCloud regions
 declare -a region_list=(
-    "us-east-1"
-    "us-east-2"
-    "us-west-2"
-    "ca-central-1"
-    "ap-southeast-2"
+    "af-south-1"
+    "ap-east-1"
+    "ap-northeast-1"
+    "ap-northeast-2"
+    "ap-northeast-3"
+    "ap-south-1"
     "ap-southeast-1"
+    "ap-southeast-2"
+    "ap-southeast-3"
+    "ca-central-1"
     "eu-central-1"
+    "eu-north-1"
+    "eu-south-1"
     "eu-west-1"
     "eu-west-2"
-    "eu-north-1"
-    "ap-south-1"
-    "ap-northeast-2"
-    "ap-northeast-1"
     "eu-west-3"
+    "me-south-1"
     "sa-east-1"
-    "us-gov-west-1"
+    "us-east-1"
+    "us-east-2"
     "us-gov-east-1"
+    "us-gov-west-1"
+    "us-west-1"
+    "us-west-2"
 )
 for region in "${region_list[@]}"
 do
@@ -126,3 +152,4 @@ cd -
 #Copy Lambda Zip Files to the Global S3 Assets
 echo -e "\n Copying lambda zip files to Global S3 Assets"
 cp "$build_dist_dir"/*.zip "$template_dist_dir"/
+
