@@ -30,7 +30,7 @@ setuptools.setup(
         "yorm==1.6.2",
         "Jinja2==2.11.3",
         "MarkupSafe==2.0.1",  # https://github.com/pallets/jinja/issues/1585
-        "requests==2.25.1",
+        "requests==2.31.0",
         "markdown_to_json==1.0.0",
         "python-dateutil==2.8.1",
         "boto3==1.20.15",
