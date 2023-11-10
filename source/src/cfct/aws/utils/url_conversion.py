@@ -15,6 +15,7 @@
 
 from os import environ
 from urllib.parse import urlparse
+
 from boto3.session import Session
 
 
@@ -86,6 +87,10 @@ def parse_bucket_key_names(http_url):
         region = parsed_url.netloc.split(".")[2]
     session = Session()
     partition_name = session.get_partition_for_region(region_name=session.region_name)
-    if region not in session.get_available_regions(partition_name=partition_name, service_name='s3'):
-        raise ValueError(f"URL: {http_url} is missing a 'Region' or is using a region you are not opted into.\nExpected URL format https://s3.Region.amazonaws.com/bucket-name/key-name or https://bucket-name.s3.Region.amazonaws.com/key-name")
+    if region not in session.get_available_regions(
+        partition_name=partition_name, service_name="s3"
+    ):
+        raise ValueError(
+            f"URL: {http_url} is missing a 'Region' or is using a region you are not opted into.\nExpected URL format https://s3.Region.amazonaws.com/bucket-name/key-name or https://bucket-name.s3.Region.amazonaws.com/key-name"
+        )
     return bucket_name, key_name, region

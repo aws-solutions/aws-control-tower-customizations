@@ -66,12 +66,8 @@ class StageFile(S3):
 
         :return: S3 URL, type: String
         """
-        local_file = os.path.join(
-            os.environ.get("MANIFEST_FOLDER"), self.relative_file_path
-        )
-        key_name = "{}/{}".format(
-            os.environ.get("TEMPLATE_KEY_PREFIX"), self.relative_file_path
-        )
+        local_file = os.path.join(os.environ.get("MANIFEST_FOLDER"), self.relative_file_path)
+        key_name = "{}/{}".format(os.environ.get("TEMPLATE_KEY_PREFIX"), self.relative_file_path)
         self.logger.info(
             "Uploading the template file: {} to S3 bucket: {} "
             "and key: {}".format(local_file, os.environ.get("STAGING_BUCKET"), key_name)

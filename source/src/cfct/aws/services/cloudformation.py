@@ -20,12 +20,9 @@ import os
 from typing import Any, Dict, List
 
 from botocore.exceptions import ClientError
+
 from cfct.aws.utils.boto3_session import Boto3Session
-from cfct.types import (
-    ResourcePropertiesTypeDef,
-    StackSetInstanceTypeDef,
-    StackSetRequestTypeDef,
-)
+from cfct.types import ResourcePropertiesTypeDef, StackSetInstanceTypeDef, StackSetRequestTypeDef
 from cfct.utils.retry_decorator import try_except_retry
 
 
@@ -41,13 +38,9 @@ class StackSet(Boto3Session):
         self.logger = logger
         __service_name = "cloudformation"
         self.max_concurrent_percent = int(os.environ.get("MAX_CONCURRENT_PERCENT", 100))
-        self.failed_tolerance_percent = int(
-            os.environ.get("FAILED_TOLERANCE_PERCENT", 10)
-        )
-        self.region_concurrency_type = os.environ.get(
-            "REGION_CONCURRENCY_TYPE", "PARALLEL"
-        ).upper()
-        self.max_results_per_page = 20
+        self.failed_tolerance_percent = int(os.environ.get("FAILED_TOLERANCE_PERCENT", 10))
+        self.region_concurrency_type = os.environ.get("REGION_CONCURRENCY_TYPE", "PARALLEL").upper()
+        self.max_results_per_page = 100
         super().__init__(logger, __service_name, **kwargs)
         self.cfn_client = super().get_client()
 
@@ -75,9 +68,7 @@ class StackSet(Boto3Session):
             return response
         except ClientError as e:
             self.logger.error(
-                "'{}' StackSet Operation ID: {} not found.".format(
-                    stack_set_name, operation_id
-                )
+                "'{}' StackSet Operation ID: {} not found.".format(stack_set_name, operation_id)
             )
             self.logger.log_unhandled_exception(e)
             raise
@@ -108,17 +99,10 @@ class StackSet(Boto3Session):
             # build the account and region list for the stack set
             # using list(set(LIST)) to remove the duplicate values from the list
             account_list = list(
-                set(
-                    [
-                        stack_instance["Account"]
-                        for stack_instance in stack_instance_list
-                    ]
-                )
+                set([stack_instance["Account"] for stack_instance in stack_instance_list])
             )
             region_list = list(
-                set(
-                    [stack_instance["Region"] for stack_instance in stack_instance_list]
-                )
+                set([stack_instance["Region"] for stack_instance in stack_instance_list])
             )
             next_token = response.get("NextToken", None)
 
@@ -134,20 +118,10 @@ class StackSet(Boto3Session):
 
                 # update account and region lists
                 additional_account_list = list(
-                    set(
-                        [
-                            stack_instance["Account"]
-                            for stack_instance in stack_instance_list
-                        ]
-                    )
+                    set([stack_instance["Account"] for stack_instance in stack_instance_list])
                 )
                 additional_region_list = list(
-                    set(
-                        [
-                            stack_instance["Region"]
-                            for stack_instance in stack_instance_list
-                        ]
-                    )
+                    set([stack_instance["Region"] for stack_instance in stack_instance_list])
                 )
                 account_list = account_list + additional_account_list
                 region_list = region_list + additional_region_list
@@ -255,9 +229,7 @@ class StackSet(Boto3Session):
                 self.logger.log_unhandled_exception(e)
                 raise
 
-    def update_stack_instances(
-        self, stack_set_name, account_list, region_list, override_params
-    ):
+    def update_stack_instances(self, stack_set_name, account_list, region_list, override_params):
         try:
             parameters = []
             param_dict = {}
@@ -389,9 +361,7 @@ class StackSet(Boto3Session):
             self.logger.log_unhandled_exception(e)
             raise
 
-    def _filter_managed_stack_set_names(
-        self, list_stackset_response: Dict[str, Any]
-    ) -> List[str]:
+    def _filter_managed_stack_set_names(self, list_stackset_response: Dict[str, Any]) -> List[str]:
         """
         Reduces a list of given stackset summaries to only those considered managed by CfCT
         """
@@ -431,19 +401,14 @@ class StackSet(Boto3Session):
         A StackSet is considered managed if it has both the prefix we expect, and the proper tag
         """
 
-        has_tag = (
-            StackSet.DEPLOYED_BY_CFCT_TAG
-            in describe_stackset_response["StackSet"]["Tags"]
-        )
+        has_tag = StackSet.DEPLOYED_BY_CFCT_TAG in describe_stackset_response["StackSet"]["Tags"]
         has_prefix = describe_stackset_response["StackSet"]["StackSetName"].startswith(
             StackSet.CFCT_STACK_SET_PREFIX
         )
         is_active = describe_stackset_response["StackSet"]["Status"] == "ACTIVE"
         return all((has_prefix, has_tag, is_active))
 
-    def get_stack_sets_not_present_in_manifest(
-        self, manifest_stack_sets: List[str]
-    ) -> List[str]:
+    def get_stack_sets_not_present_in_manifest(self, manifest_stack_sets: List[str]) -> List[str]:
         """
         Compares list of stacksets defined in the manifest versus the stacksets in the account
         and returns a list of all stackset names to be deleted
@@ -455,36 +420,24 @@ class StackSet(Boto3Session):
             f"{StackSet.CFCT_STACK_SET_PREFIX}{name}" for name in manifest_stack_sets
         ]
         cfct_deployed_stack_sets = self.get_managed_stack_set_names()
-        return list(
-            set(cfct_deployed_stack_sets).difference(
-                set(manifest_stack_sets_with_prefix)
-            )
-        )
+        return list(set(cfct_deployed_stack_sets).difference(set(manifest_stack_sets_with_prefix)))
 
     def generate_delete_request(
         self, stacksets_to_delete: List[str]
     ) -> List[StackSetRequestTypeDef]:
         requests: List[StackSetRequestTypeDef] = []
         for stackset_name in stacksets_to_delete:
-            deployed_instances = self._get_stackset_instances(
-                stackset_name=stackset_name
-            )
+            deployed_instances = self._get_stackset_instances(stackset_name=stackset_name)
             requests.append(
                 StackSetRequestTypeDef(
                     RequestType="Delete",
                     ResourceProperties=ResourcePropertiesTypeDef(
                         StackSetName=stackset_name,
                         TemplateURL="DeleteStackSetNoopURL",
-                        Capabilities=json.dumps(
-                            ["CAPABILITY_NAMED_IAM", "CAPABILITY_AUTO_EXPAND"]
-                        ),
+                        Capabilities=json.dumps(["CAPABILITY_NAMED_IAM", "CAPABILITY_AUTO_EXPAND"]),
                         Parameters={},
-                        AccountList=list(
-                            {instance["account"] for instance in deployed_instances}
-                        ),
-                        RegionList=list(
-                            {instance["region"] for instance in deployed_instances}
-                        ),
+                        AccountList=list({instance["account"] for instance in deployed_instances}),
+                        RegionList=list({instance["region"] for instance in deployed_instances}),
                         SSMParameters={},
                     ),
                     SkipUpdateStackSet="yes",
@@ -492,9 +445,7 @@ class StackSet(Boto3Session):
             )
         return requests
 
-    def _get_stackset_instances(
-        self, stackset_name: str
-    ) -> List[StackSetInstanceTypeDef]:
+    def _get_stackset_instances(self, stackset_name: str) -> List[StackSetInstanceTypeDef]:
         instance_regions_and_accounts: List[StackSetInstanceTypeDef] = []
         paginator = self.cfn_client.get_paginator("list_stack_instances")
         for page in paginator.paginate(StackSetName=stackset_name):

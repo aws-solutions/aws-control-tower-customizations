@@ -39,9 +39,7 @@ def send(
         response_body["Reason"] = msg
     else:
         response_body["Reason"] = str(reason)[0:255] + "... " + msg
-    response_body["PhysicalResourceId"] = (
-        physical_resource_id or context.log_stream_name
-    )
+    response_body["PhysicalResourceId"] = physical_resource_id or context.log_stream_name
     response_body["StackId"] = event["StackId"]
     response_body["RequestId"] = event["RequestId"]
     response_body["LogicalResourceId"] = event["LogicalResourceId"]
@@ -62,13 +60,10 @@ def send(
     try:
         if response_url == "http://pre-signed-S3-url-for-response":
             logger.info(
-                "CloudFormation returned status code:"
-                " THIS IS A TEST OUTSIDE OF CLOUDFORMATION"
+                "CloudFormation returned status code:" " THIS IS A TEST OUTSIDE OF CLOUDFORMATION"
             )
         else:
-            response = requests.put(
-                response_url, data=json_response_body, headers=headers
-            )
+            response = requests.put(response_url, data=json_response_body, headers=headers)
             logger.info("CloudFormation returned status code: " + response.reason)
     except Exception as e:
         logger.error("send(..) failed executing requests.put(..): " + str(e))

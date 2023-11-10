@@ -20,6 +20,7 @@ import time
 from uuid import uuid4
 
 from botocore.exceptions import ClientError
+
 from cfct.aws.services.cloudformation import StackSet
 from cfct.aws.services.s3 import S3
 from cfct.aws.services.state_machine import StateMachine
@@ -29,7 +30,6 @@ from cfct.manifest.cfn_params_handler import CFNParamsHandler
 from cfct.metrics.solution_metrics import SolutionMetrics
 from cfct.utils.list_comparision import compare_lists
 from cfct.utils.parameter_manipulation import reverse_transform_params, transform_params
-from cfct.utils.string_manipulation import trim_length_from_end
 
 
 class SMExecutionManager:
@@ -81,13 +81,9 @@ class SMExecutionManager:
                     )
                 )
 
-                stackset_unchanged = all(
-                    [template_matched, parameters_matched, stack_set_exist]
-                )
+                stackset_unchanged = all([template_matched, parameters_matched, stack_set_exist])
                 if stackset_unchanged:
-                    start_execution_flag = self.compare_stack_instances(
-                        sm_input, stack_set_name
-                    )
+                    start_execution_flag = self.compare_stack_instances(sm_input, stack_set_name)
                     # template and parameter does not require update
                     updated_sm_input.update({"SkipUpdateStackSet": "yes"})
                 else:
@@ -96,7 +92,6 @@ class SMExecutionManager:
                     start_execution_flag = True
 
             if start_execution_flag:
-
                 sm_exec_name = self.get_sm_exec_name(updated_sm_input)
                 sm_exec_arn = self.setup_execution(updated_sm_input, sm_exec_name)
                 self.list_sm_exec_arns.append(sm_exec_arn)
@@ -118,8 +113,7 @@ class SMExecutionManager:
                     except ClientError as error:
                         if (
                             is_deletion
-                            and error.response["Error"]["Code"]
-                            == "StackSetNotFoundException"
+                            and error.response["Error"]["Code"] == "StackSetNotFoundException"
                         ):
                             pass
                         else:
@@ -127,8 +121,7 @@ class SMExecutionManager:
 
                 else:
                     self.logger.info(
-                        "State Machine execution completed. "
-                        "Starting next execution..."
+                        "State Machine execution completed. " "Starting next execution..."
                     )
         self.logger.info("All State Machine executions completed.")
         return status, failed_execution_list
@@ -161,14 +154,12 @@ class SMExecutionManager:
         # set execution name
         exec_name = "%s-%s-%s" % (
             sm_input.get("RequestType"),
-            trim_length_from_end(name.replace(" ", ""), 50),
+            name.replace(" ", "")[:50],
             time.strftime("%Y-%m-%dT%H-%M-%S"),
         )
 
         # execute all SM at regular interval of wait_time
-        return self.state_machine.start_execution(
-            os.environ.get("SM_ARN"), sm_input, exec_name
-        )
+        return self.state_machine.start_execution(os.environ.get("SM_ARN"), sm_input, exec_name)
 
     def populate_ssm_params(self, sm_input):
         """The scenario is if you have one CFN resource that exports output
@@ -178,9 +169,7 @@ class SMExecutionManager:
         as input for second CFN resource's input for SM. Get the parameters
         for CFN template from sm_input
         """
-        self.logger.info(
-            "Populating SSM parameter values for SM input: {}".format(sm_input)
-        )
+        self.logger.info("Populating SSM parameter values for SM input: {}".format(sm_input))
         params = sm_input.get("ResourceProperties").get("Parameters", {})
         # First transform it from {name: value} to [{'ParameterKey': name},
         # {'ParameterValue': value}]
@@ -194,16 +183,13 @@ class SMExecutionManager:
         return sm_input
 
     def compare_template_and_params(self, sm_input, stack_name):
-
         self.logger.info("Comparing the templates and parameters.")
         # Assume that the stack exists, but is not the same state
         stack_set_exist = True
         template_compare, params_compare = False, False
         if stack_name:
             describe_response = self.stack_set.describe_stack_set(stack_name)
-            self.logger.info(
-                "Print Describe Stack Set Response: {}".format(describe_response)
-            )
+            self.logger.info("Print Describe Stack Set Response: {}".format(describe_response))
             if describe_response is not None:
                 self.logger.info("Found existing stack set.")
 
@@ -220,13 +206,9 @@ class SMExecutionManager:
                     " {} with local copy of template".format(stack_name)
                 )
 
-                template_http_url = sm_input.get("ResourceProperties").get(
-                    "TemplateURL", ""
-                )
+                template_http_url = sm_input.get("ResourceProperties").get("TemplateURL", "")
                 if template_http_url:
-                    bucket_name, key_name, region = parse_bucket_key_names(
-                        template_http_url
-                    )
+                    bucket_name, key_name, region = parse_bucket_key_names(template_http_url)
                     local_template_file = tempfile.mkstemp()[1]
 
                     s3_endpoint_url = "https://s3.%s.amazonaws.com" % region
@@ -244,9 +226,7 @@ class SMExecutionManager:
                 with open(cfn_template_file, "w") as f:
                     f.write(describe_response.get("StackSet").get("TemplateBody"))
                 # cmp function return true of the contents are same
-                template_compare = filecmp.cmp(
-                    local_template_file, cfn_template_file, False
-                )
+                template_compare = filecmp.cmp(local_template_file, cfn_template_file, False)
                 self.logger.info(
                     "Comparing the parameters of the StackSet"
                     ": {} with local copy of JSON parameters"
@@ -273,9 +253,7 @@ class SMExecutionManager:
                 )
             else:
                 # Stack set did not exist
-                self.logger.info(
-                    "Stack Set does not exist. " "Creating a new stack set ...."
-                )
+                self.logger.info("Stack Set does not exist. " "Creating a new stack set ....")
                 template_compare, params_compare = True, True
                 stack_set_exist = False
 
@@ -283,17 +261,13 @@ class SMExecutionManager:
 
     def get_stack_set_operation_status(self, stack_name):
         self.logger.info(
-            "Checking the status of last stack set "
-            "operation on {}".format(stack_name)
+            "Checking the status of last stack set " "operation on {}".format(stack_name)
         )
-        response = self.stack_set.list_stack_set_operations(
-            StackSetName=stack_name, MaxResults=1
-        )
+        response = self.stack_set.list_stack_set_operations(StackSetName=stack_name, MaxResults=1)
         if response and response.get("Summaries"):
             for instance in response.get("Summaries"):
                 self.logger.info(
-                    "Status of last stack set "
-                    "operation : {}".format(instance.get("Status"))
+                    "Status of last stack set " "operation : {}".format(instance.get("Status"))
                 )
                 if instance.get("Status") != "SUCCEEDED":
                     self.logger.info(
@@ -321,9 +295,7 @@ class SMExecutionManager:
             "expected accounts & regions for "
             "StackSet: {}".format(stack_name)
         )
-        expected_account_list = sm_input.get("ResourceProperties").get(
-            "AccountList", []
-        )
+        expected_account_list = sm_input.get("ResourceProperties").get("AccountList", [])
         expected_region_list = sm_input.get("ResourceProperties").get("RegionList", [])
 
         (
@@ -335,17 +307,11 @@ class SMExecutionManager:
             "*** Stack instances expected to be deployed " "in following accounts. ***"
         )
         self.logger.info(expected_account_list)
-        self.logger.info(
-            "*** Stack instances actually deployed " "in following accounts. ***"
-        )
+        self.logger.info("*** Stack instances actually deployed " "in following accounts. ***")
         self.logger.info(actual_account_list)
-        self.logger.info(
-            "*** Stack instances expected to be deployed " "in following regions. ***"
-        )
+        self.logger.info("*** Stack instances expected to be deployed " "in following regions. ***")
         self.logger.info(expected_region_list)
-        self.logger.info(
-            "*** Stack instances actually deployed " "in following regions. ***"
-        )
+        self.logger.info("*** Stack instances actually deployed " "in following regions. ***")
         self.logger.info(actual_region_list)
 
         self.logger.info("*** Comparing account lists ***")
@@ -365,7 +331,6 @@ class SMExecutionManager:
     def monitor_state_machines_execution_status(
         self, sm_execution_arns: list, retry_wait_time: int
     ):
-
         # Assume we succeed until a failure is observed
         overall_status = "SUCCEEDED"
         failed_executions = []
@@ -389,8 +354,7 @@ class SMExecutionManager:
     def enforce_stack_set_deployment_successful(self, stack_set_name: str) -> None:
         failed_detailed_statuses = ["CANCELLED", "FAILED", "INOPERABLE"]
         list_filters = [
-            {"Name": "DETAILED_STATUS", "Values": status}
-            for status in failed_detailed_statuses
+            {"Name": "DETAILED_STATUS", "Values": status} for status in failed_detailed_statuses
         ]
         # Note that we don't paginate because if this API returns any elements, failed instances exist.
         for list_filter in list_filters:

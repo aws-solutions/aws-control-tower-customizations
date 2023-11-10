@@ -22,13 +22,13 @@ import zipfile
 from hashlib import md5
 from uuid import uuid4
 
+from jinja2 import Environment, FileSystemLoader
+
 from cfct.aws.services.kms import KMS
 from cfct.aws.services.s3 import S3
 from cfct.aws.services.ssm import SSM
 from cfct.utils.crhelper import cfn_handler
 from cfct.utils.logger import Logger
-from cfct.utils.os_util import make_dir
-from jinja2 import Environment, FileSystemLoader
 
 # initialise logger
 log_level = os.environ.get("LOG_LEVEL")
@@ -100,9 +100,7 @@ def find_alias(alias_name):
             logger.info("Alias not found in the list")
             alias_not_found = False
         else:
-            logger.info(
-                "Could not find alias in truncated response," " trying again..."
-            )
+            logger.info("Could not find alias in truncated response," " trying again...")
             marker = response_list_alias.get("NextMarker")
             logger.info("Trying again with NextMarker: {}".format(marker))
 
@@ -148,9 +146,7 @@ def config_deployer(event):
         # set variables
         source_bucket_name = event.get("BucketConfig", {}).get("SourceBucketName")
         key_name = event.get("BucketConfig", {}).get("SourceS3Key")
-        destination_bucket_name = event.get("BucketConfig", {}).get(
-            "DestinationBucketName"
-        )
+        destination_bucket_name = event.get("BucketConfig", {}).get("DestinationBucketName")
         input_zip_file_name = key_name.split("/")[-1] if "/" in key_name else key_name
         output_zip_file_name = event.get("BucketConfig", {}).get("DestinationS3Key")
         alias_name = event.get("KMSConfig", {}).get("KMSKeyAlias")
@@ -173,9 +169,7 @@ def config_deployer(event):
             kms.enable_key_rotation(key_id)
             logger.info("Automatic key rotation enabled.")
         else:
-            logger.info(
-                "Key ID: {} found attached with alias: {}".format(key_id, alias_name)
-            )
+            logger.info("Key ID: {} found attached with alias: {}".format(key_id, alias_name))
             logger.info("Updating KMS key policy")
             update_key_policy(key_id, policy)
             kms.enable_key_rotation(key_id)
@@ -184,7 +178,8 @@ def config_deployer(event):
         s3.put_bucket_encryption(destination_bucket_name, key_id)
 
         # Download the file from Solutions S3 bucket
-        make_dir(base_path, logger)
+        logger.info(f"Creating {base_path} if it doesn't exist")
+        os.makedirs(base_path, exist_ok=True)
         s3.download_file(source_bucket_name, key_name, input_file_path)
 
         # Unzip the config zip file
@@ -197,15 +192,14 @@ def config_deployer(event):
             exclude_j2_files.append(f)
             filename, file_extension = os.path.splitext(f)
             destination_file_path = (
-                extract_path + "/" + filename
-                if file_extension == ".j2"
-                else extract_path + "/" + f
+                extract_path + "/" + filename if file_extension == ".j2" else extract_path + "/" + f
             )
             find_replace(extract_path, f, destination_file_path, parameters)
 
         # Zip the contents
         exclude = ["zip"] + exclude_j2_files
-        make_dir(output_path, logger)
+        logger.info(f"Creating {output_path} if it doesn't exist")
+        os.makedirs(output_path)
         zip_function(output_zip_file_name, extract_path, output_path, exclude)
 
         # Upload the file in the customer S3 bucket
@@ -238,9 +232,7 @@ def update_config_deployer(event):
         kms.enable_key_rotation(key_id)
         logger.info("Automatic key rotation enabled.")
     else:
-        logger.info(
-            "Key ID: {} found attached with alias: {}".format(key_id, alias_name)
-        )
+        logger.info("Key ID: {} found attached with alias: {}".format(key_id, alias_name))
         logger.info("Updating KMS key policy")
         update_key_policy(key_id, policy)
         kms.enable_key_rotation(key_id)

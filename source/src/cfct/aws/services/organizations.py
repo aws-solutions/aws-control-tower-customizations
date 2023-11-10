@@ -16,6 +16,7 @@
 # !/bin/python
 
 from botocore.exceptions import ClientError
+
 from cfct.aws.utils.boto3_session import Boto3Session
 from cfct.utils.retry_decorator import try_except_retry
 
@@ -37,9 +38,7 @@ class Organizations(Boto3Session):
 
     def list_organizational_units_for_parent(self, parent_id):
         try:
-            response = self.org_client.list_organizational_units_for_parent(
-                ParentId=parent_id
-            )
+            response = self.org_client.list_organizational_units_for_parent(ParentId=parent_id)
 
             ou_list = response.get("OrganizationalUnits", [])
             next_token = response.get("NextToken", None)

@@ -16,6 +16,7 @@
 # !/bin/python
 
 from botocore.exceptions import ClientError
+
 from cfct.aws.utils.boto3_session import Boto3Session
 
 

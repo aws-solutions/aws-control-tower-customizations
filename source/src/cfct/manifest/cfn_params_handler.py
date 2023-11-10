@@ -22,11 +22,7 @@ from cfct.aws.services.kms import KMS
 from cfct.aws.services.ssm import SSM
 from cfct.aws.services.sts import AssumeRole
 from cfct.utils.password_generator import random_pwd_generator
-from cfct.utils.string_manipulation import (
-    convert_string_to_list,
-    sanitize,
-    trim_string_from_front,
-)
+from cfct.utils.string_manipulation import sanitize, trim_string_from_front
 
 
 class CFNParamsHandler(object):
@@ -82,9 +78,7 @@ class CFNParamsHandler(object):
             existing_param = self.ssm.describe_parameters(key_az)
 
             if existing_param:
-                self.logger.info(
-                    "Found existing SSM parameter, returning" " existing AZ list."
-                )
+                self.logger.info("Found existing SSM parameter, returning" " existing AZ list.")
                 return self.ssm.get_parameter(key_az)
         if account is not None:
             # fetch account from list for cross account assume role workflow
@@ -93,8 +87,7 @@ class CFNParamsHandler(object):
             acct = account[0] if isinstance(account, list) else account
             ec2 = self._session(region, acct)
             self.logger.info(
-                "Getting list of AZs in region: {} from"
-                " account: {}".format(region, acct)
+                "Getting list of AZs in region: {} from" " account: {}".format(region, acct)
             )
             return self._get_az(ec2, key_az, qty)
         else:
@@ -134,9 +127,7 @@ class CFNParamsHandler(object):
             key name
         """
         if param_key_name:
-            self.logger.info(
-                "Looking up values in SSM parameter:{}".format(param_key_name)
-            )
+            self.logger.info("Looking up values in SSM parameter:{}".format(param_key_name))
             existing_param = self.ssm.describe_parameters(param_key_name)
 
             if existing_param:
@@ -155,8 +146,7 @@ class CFNParamsHandler(object):
         ec2 = self._session(region, account)
         # create EC2 key pair in member account
         self.logger.info(
-            "Create key pair in the member account {} in"
-            " region: {}".format(account, region)
+            "Create key pair in the member account {} in" " region: {}".format(account, region)
         )
         response = ec2.create_key_pair(key_name)
 
@@ -199,9 +189,7 @@ class CFNParamsHandler(object):
         response = "_get_ssm_secure_string_" + key_password
         param_exists = False
         if key_password:
-            self.logger.info(
-                "Looking up values in SSM parameter:{}".format(key_password)
-            )
+            self.logger.info("Looking up values in SSM parameter:{}".format(key_password))
             existing_param = self.ssm.describe_parameters(key_password)
 
             if existing_param:
@@ -214,20 +202,14 @@ class CFNParamsHandler(object):
             password = random_pwd_generator(length, additional)
 
             self.logger.info("Adding Random password to SSM Parameter Store")
-            description = (
-                "Contains random password created by Custom Control" " Tower Solution"
-            )
+            description = "Contains random password created by Custom Control" " Tower Solution"
 
             if key_password:
                 key_id = self._get_kms_key_id()
-                self.ssm.put_parameter_use_cmk(
-                    key_password, password, key_id, description
-                )
+                self.ssm.put_parameter_use_cmk(key_password, password, key_id, description)
         return response
 
-    def update_params(
-        self, params_in: list, account=None, region=None, substitute_ssm_values=True
-    ):
+    def update_params(self, params_in: list, account=None, region=None, substitute_ssm_values=True):
         """Updates SSM parameters
         Args:
             params_in (list): Python List of dict of input params e.g.
@@ -254,12 +236,8 @@ class CFNParamsHandler(object):
             key = param.get("ParameterKey")
             value = param.get("ParameterValue")
             separator = ","
-            value = (
-                value
-                if separator not in value
-                else convert_string_to_list(value, separator)
-            )
-
+            if separator in value:
+                value = [x.strip() for x in value.split(separator)]
             if not isinstance(value, list):
                 value = self._process_alfred_helper(
                     param, key, value, account, region, substitute_ssm_values
@@ -306,9 +284,7 @@ class CFNParamsHandler(object):
             # Check if supported keyword e.g. alfred_ssm_,
             # alfred_genaz_, alfred_getaz_, alfred_genuuid, etc.
             if keyword.startswith("alfred_ssm_"):
-                value, param_flag = self._update_alfred_ssm(
-                    keyword, value, substitute_ssm_values
-                )
+                value, param_flag = self._update_alfred_ssm(keyword, value, substitute_ssm_values)
                 if param_flag is False:
                     raise KeyError(
                         "Missing SSM parameter name for:"
@@ -439,7 +415,5 @@ class CFNParamsHandler(object):
                 val = ssm_parameter.get("value")[2:-1]
                 if val.lower() == "az":
                     az_param_name = ssm_parameter.get("name")
-        value = self.get_azs_from_member_account(
-            region, no_of_az, account, az_param_name
-        )
+        value = self.get_azs_from_member_account(region, no_of_az, account, az_param_name)
         return value

@@ -17,6 +17,7 @@
 import os
 
 from botocore.exceptions import ClientError
+
 from cfct.aws.utils.boto3_session import Boto3Session
 from cfct.utils.retry_decorator import try_except_retry
 

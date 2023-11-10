@@ -18,6 +18,7 @@
 import tempfile
 
 from botocore.exceptions import ClientError
+
 from cfct.aws.utils.boto3_session import Boto3Session
 
 
@@ -39,9 +40,7 @@ class S3(Boto3Session):
 
     def put_bucket_policy(self, bucket_name, bucket_policy):
         try:
-            response = self.s3_client.put_bucket_policy(
-                Bucket=bucket_name, Policy=bucket_policy
-            )
+            response = self.s3_client.put_bucket_policy(Bucket=bucket_name, Policy=bucket_policy)
             return response
         except ClientError as e:
             self.logger.log_unhandled_exception(e)
@@ -70,13 +69,9 @@ class S3(Boto3Session):
         """
         try:
             self.logger.info(
-                "Downloading {}/{} from S3 to {}".format(
-                    bucket_name, key_name, local_file_location
-                )
+                "Downloading {}/{} from S3 to {}".format(bucket_name, key_name, local_file_location)
             )
-            self.s3_resource.Bucket(bucket_name).download_file(
-                key_name, local_file_location
-            )
+            self.s3_resource.Bucket(bucket_name).download_file(key_name, local_file_location)
         except ClientError as e:
             self.logger.log_unhandled_exception(e)
             raise

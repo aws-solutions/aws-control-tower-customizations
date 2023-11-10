@@ -308,6 +308,7 @@ Resources:
       RepositoryDescription: Configuration for Customizations for AWS Control Tower solution
       RepositoryName: !Ref CodeCommitRepositoryName
       Code:
+        BranchName: !Ref CodeCommitBranchName
         S3:
           Bucket: !Sub %TEMPLATE_BUCKET_NAME%
           Key: !Sub %SOLUTION_NAME%/%VERSION%/custom-control-tower-configuration-${AWS::Region}.zip
@@ -1204,7 +1205,6 @@ Resources:
                   - cloudformation:UpdateStackInstances
                   - cloudformation:TagResource
                   - cloudformation:ListStackInstances
-                  - cloudformation:GetTemplateSummary
                   - cloudformation:DescribeStacks
                 Resource:
                   - !Sub arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/*
@@ -1212,6 +1212,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - cloudformation:ValidateTemplate
+                  - cloudformation:GetTemplateSummary
                 Resource: '*'
         - PolicyName: State-Machine-Lambda-Policy-SSM
           PolicyDocument:
@@ -2188,23 +2189,7 @@ Resources:
                 "TimeoutSeconds": 300,
                 "HeartbeatSeconds": 60,
                 "InputPath": "$",
-                "Next": "Check List StackInstances Accounts Complete?"
-              },
-              "Check List StackInstances Accounts Complete?": {
-                "Type": "Choice",
-                "Choices": [
-                  {
-                    "Variable": "$.NextToken",
-                    "StringEquals": "Complete",
-                    "Next": "Skip Update StackSet?"
-                  }
-                ],
-                "Default": "Check List StackInstances Accounts Wait"
-              },
-              "Check List StackInstances Accounts Wait": {
-                "Type": "Wait",
-                "Seconds": 5,
-                "Next": "List StackInstances Accounts"
+                "Next": "Skip Update StackSet?"
               },
               "Skip Update StackSet?": {
                  "Type": "Choice",
@@ -3118,10 +3103,10 @@ Resources:
           RoleArn: !GetAtt CustomControlTowerPipelineTriggerRole.Arn
 
   # Cloudwatch Event Rule for Lifecycle Event (LE): triggered by LE events and send events to SQS
-  CustomControlTowerLECWEventRule:
+  CustomControlTowerCreateManagedAccountCWEventRule:
     Type: AWS::Events::Rule
     Properties:
-      Description: Custom Control Tower - Rule for lifecycle events from Control Tower Service
+      Description: Trigger CFCT on CreateManagedAccount events from Control Tower Service
       EventPattern:
         {
           "detail-type": [
@@ -3136,6 +3121,38 @@ Resources:
               ],
               "serviceEventDetails": {
                 "createManagedAccountStatus": {
+                  "state": [
+                    "SUCCEEDED"
+                  ]
+                }
+              }
+          }
+        }
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt CustomControlTowerLEFIFOQueue.Arn
+          Id: "CustomControlTower_Lifecycle_Event_FIFO_Queue"
+          SqsParameters:
+            MessageGroupId: CustomControlTower_Lifecycle_Event
+
+  CustomControlTowerUpdateManagedAccountCWEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Trigger CFCT on UpdateManagedAccount events from Control Tower Service
+      EventPattern:
+        {
+          "detail-type": [
+            "AWS Service Event via CloudTrail"
+          ],
+          "source": [
+              "aws.controltower"
+          ],
+          "detail": {
+              "eventName": [
+                  "UpdateManagedAccount"
+              ],
+              "serviceEventDetails": {
+                "updateManagedAccountStatus": {
                   "state": [
                     "SUCCEEDED"
                   ]
@@ -3166,7 +3183,9 @@ Resources:
             Resource: !GetAtt CustomControlTowerLEFIFOQueue.Arn
             Condition:
               ArnEquals:
-                aws:SourceArn: !GetAtt CustomControlTowerLECWEventRule.Arn
+                aws:SourceArn: 
+                  - !GetAtt CustomControlTowerCreateManagedAccountCWEventRule.Arn
+                  - !GetAtt CustomControlTowerUpdateManagedAccountCWEventRule.Arn
 
 Outputs:
   CustomControlTowerCodePipeline:

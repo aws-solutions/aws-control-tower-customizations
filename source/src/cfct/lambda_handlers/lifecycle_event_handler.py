@@ -20,9 +20,7 @@ from cfct.aws.services.code_pipeline import CodePipeline
 from cfct.utils.logger import Logger
 
 # initialise logger
-log_level = (
-    "info" if os.environ.get("LOG_LEVEL") is None else os.environ.get("LOG_LEVEL")
-)
+log_level = "info" if os.environ.get("LOG_LEVEL") is None else os.environ.get("LOG_LEVEL")
 logger = Logger(loglevel=log_level)
 init_failed = False
 
@@ -48,10 +46,7 @@ def invoke_code_pipeline(event):
         # The filtering of specific control tower lifecycle events is done
         # by a CWE rule, which is configured to deliver only
         # the matching events to the SQS queue.
-        if (
-            record["body"] is not None
-            and record["body"].find('"source":"aws.controltower"') >= 0
-        ):
+        if record["body"] is not None and record["body"].find('"source":"aws.controltower"') >= 0:
             msg_count += 1
 
     if msg_count > 0:
@@ -79,9 +74,7 @@ def lambda_handler(event, context):
         context
     """
     try:
-        logger.info(
-            "<<<<<<<<<< Poll Control Tower lifecyle events from" " SQS queue >>>>>>>>>>"
-        )
+        logger.info("<<<<<<<<<< Poll Control Tower lifecyle events from" " SQS queue >>>>>>>>>>")
         logger.info(event)
         logger.debug(context)
 

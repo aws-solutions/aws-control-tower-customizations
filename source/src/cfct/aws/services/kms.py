@@ -16,6 +16,7 @@
 # !/bin/python
 
 from botocore.exceptions import ClientError
+
 from cfct.aws.utils.boto3_session import Boto3Session
 
 
@@ -56,9 +57,7 @@ class KMS(Boto3Session):
 
     def create_alias(self, alias_name, key_name):
         try:
-            response = self.kms_client.create_alias(
-                AliasName=alias_name, TargetKeyId=key_name
-            )
+            response = self.kms_client.create_alias(AliasName=alias_name, TargetKeyId=key_name)
             return response
         except ClientError as e:
             self.logger.log_unhandled_exception(e)

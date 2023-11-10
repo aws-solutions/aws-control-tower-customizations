@@ -19,6 +19,7 @@ import json
 
 import boto3
 from botocore.exceptions import ClientError
+
 from cfct.aws.utils.boto3_session import Boto3Session
 from cfct.utils.string_manipulation import sanitize
 
@@ -41,9 +42,7 @@ class StateMachine(Boto3Session):
                 input=json.dumps(input),
                 name=sanitize(name),
             )
-            self.logger.info(
-                "State machine Execution ARN: {}".format(response["executionArn"])
-            )
+            self.logger.info("State machine Execution ARN: {}".format(response["executionArn"]))
             return response.get("executionArn")
         except ClientError as e:
             self.logger.log_unhandled_exception(e)
@@ -51,15 +50,9 @@ class StateMachine(Boto3Session):
 
     def check_state_machine_status(self, execution_arn) -> str:
         try:
-            self.logger.info(
-                "Checking execution of state machine: {}".format(execution_arn)
-            )
-            response = self.state_machine_client.describe_execution(
-                executionArn=execution_arn
-            )
-            self.logger.info(
-                "State machine Execution Status: {}".format(response["status"])
-            )
+            self.logger.info("Checking execution of state machine: {}".format(execution_arn))
+            response = self.state_machine_client.describe_execution(executionArn=execution_arn)
+            self.logger.info("State machine Execution Status: {}".format(response["status"]))
             if response["status"] == "RUNNING":
                 return "RUNNING"
             elif response["status"] == "SUCCEEDED":

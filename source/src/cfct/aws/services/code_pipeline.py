@@ -17,6 +17,7 @@
 import inspect
 
 from botocore.exceptions import ClientError
+
 from cfct.aws.utils.boto3_session import Boto3Session
 
 
@@ -33,9 +34,7 @@ class CodePipeline(Boto3Session):
 
     def start_pipeline_execution(self, code_pipeline_name):
         try:
-            response = self.code_pipeline.start_pipeline_execution(
-                name=code_pipeline_name
-            )
+            response = self.code_pipeline.start_pipeline_execution(name=code_pipeline_name)
             return response
         except ClientError as e:
             self.logger.log_unhandled_exception(e)

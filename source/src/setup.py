@@ -38,18 +38,19 @@ setuptools.setup(
     ],
     extras_require={
         "test": [
+            "mypy>=1.3.0",
             "mock==4.0.3",
             "moto",
             "pytest-mock==3.5.1",
             "pytest-runner==5.2",
             "uuid==1.30",
             "pytest == 6.2.4",
-            "mypy == 0.930",
             "expecter==0.3.0",
             "pykwalify == 1.8.0",
         ],
         "dev": [
             "ipython",
+            "isort",
             "ipdb",
             "black",
             "pre-commit",

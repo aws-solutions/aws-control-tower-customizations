@@ -12,6 +12,7 @@
 __pycache__
 .pytest_cache
 .mypy_cache
+.coverage
 
 # Ignore virtual environments
 venv
@@ -21,6 +22,7 @@ testing-venv
 # Ignore installed dependencies
 dist
 source/src/build
+build
 
 /deployment/open-source
 /deployment/state_machines/sample_events/

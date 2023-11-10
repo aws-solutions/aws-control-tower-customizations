@@ -32,16 +32,12 @@ from cfct.manifest.stage_to_s3 import StageFile
 from cfct.metrics.solution_metrics import SolutionMetrics
 from cfct.utils.logger import Logger
 from cfct.utils.parameter_manipulation import transform_params
-from cfct.utils.string_manipulation import (
-    convert_list_values_to_string,
-    empty_separator_handler,
-    list_sanitizer,
-)
+from cfct.utils.string_manipulation import empty_separator_handler, list_sanitizer
 
 VERSION_1 = "2020-01-01"
 VERSION_2 = "2021-03-15"
 
-logger = Logger(loglevel=os.environ["LOG_LEVEL"])
+logger = Logger(loglevel=os.getenv("LOG_LEVEL", "info"))
 
 
 def scp_manifest():
@@ -101,17 +97,13 @@ class SCPParser:
             attach_ou_list = set(policy.apply_to_accounts_in_ou)
 
             self.logger.debug(
-                "[manifest_parser.parse_scp_manifest_v1] attach_ou_list: {} ".format(
-                    attach_ou_list
-                )
+                "[manifest_parser.parse_scp_manifest_v1] attach_ou_list: {} ".format(attach_ou_list)
             )
 
             # Add ou id to final ou list
             final_ou_list = org_data.get_final_ou_list(attach_ou_list)
 
-            state_machine_inputs.append(
-                build.scp_sm_input(final_ou_list, policy, policy_url)
-            )
+            state_machine_inputs.append(build.scp_sm_input(final_ou_list, policy, policy_url))
 
         # Exit if there are no organization policies
         if len(state_machine_inputs) == 0:
@@ -144,9 +136,7 @@ class SCPParser:
                 # Add ou id to final ou list
                 final_ou_list = org_data.get_final_ou_list(attach_ou_list)
 
-                state_machine_inputs.append(
-                    build.scp_sm_input(final_ou_list, resource, policy_url)
-                )
+                state_machine_inputs.append(build.scp_sm_input(final_ou_list, resource, policy_url))
 
         # Exit if there are no organization policies
         if len(state_machine_inputs) == 0:
@@ -175,11 +165,8 @@ class StackSetParser:
         self.manifest_folder = os.environ.get("MANIFEST_FOLDER")
 
     def parse_stack_set_manifest_v1(self) -> list:
-
         self.logger.info(
-            "Parsing Core Resources from {} file".format(
-                os.environ.get("MANIFEST_FILE_PATH")
-            )
+            "Parsing Core Resources from {} file".format(os.environ.get("MANIFEST_FILE_PATH"))
         )
         build = BuildStateMachineInput(self.manifest.region)
         org = OrganizationsData()
@@ -199,7 +186,7 @@ class StackSetParser:
                 )
 
             # convert account numbers to string type
-            account_list = convert_list_values_to_string(resource.deploy_to_account)
+            account_list = list(map(str, resource.deploy_to_account))
             self.logger.info(">>>>>> ACCOUNT LIST")
             self.logger.info(account_list)
 
@@ -211,15 +198,12 @@ class StackSetParser:
             )
 
             self.logger.info(
-                "Print merged account list - accounts in manifest"
-                " + account under OU in manifest"
+                "Print merged account list - accounts in manifest" " + account under OU in manifest"
             )
             self.logger.info(sanitized_account_list)
 
             if resource.deploy_method.lower() == "stack_set":
-                sm_input = build.stack_set_state_machine_input_v1(
-                    resource, sanitized_account_list
-                )
+                sm_input = build.stack_set_state_machine_input_v1(resource, sanitized_account_list)
                 state_machine_inputs.append(sm_input)
             else:
                 raise ValueError(
@@ -236,11 +220,8 @@ class StackSetParser:
             return state_machine_inputs
 
     def parse_stack_set_manifest_v2(self) -> list:
-
         self.logger.info(
-            "Parsing Core Resources from {} file".format(
-                os.environ.get("MANIFEST_FILE_PATH")
-            )
+            "Parsing Core Resources from {} file".format(os.environ.get("MANIFEST_FILE_PATH"))
         )
         build = BuildStateMachineInput(self.manifest.region)
         org = OrganizationsData()
@@ -254,15 +235,11 @@ class StackSetParser:
                 if resource["deploy_method"] == StackSet.DEPLOY_METHOD:
                     manifest_stacksets.append(resource["name"])
 
-            stacksets_to_be_deleted = (
-                self.stack_set.get_stack_sets_not_present_in_manifest(
-                    manifest_stack_sets=manifest_stacksets
-                )
+            stacksets_to_be_deleted = self.stack_set.get_stack_sets_not_present_in_manifest(
+                manifest_stack_sets=manifest_stacksets
             )
             state_machine_inputs.extend(
-                self.stack_set.generate_delete_request(
-                    stacksets_to_delete=stacksets_to_be_deleted
-                )
+                self.stack_set.generate_delete_request(stacksets_to_delete=stacksets_to_be_deleted)
             )
 
         for resource in self.manifest.resources:
@@ -279,9 +256,7 @@ class StackSetParser:
                     )
 
                 # convert account numbers to string type
-                account_list = convert_list_values_to_string(
-                    resource.deployment_targets.accounts
-                )
+                account_list = list(map(str, resource.deployment_targets.accounts))
                 self.logger.info(">>>>>> ACCOUNT LIST")
                 self.logger.info(account_list)
 
@@ -351,7 +326,6 @@ class BuildStateMachineInput:
         return sm_input
 
     def stack_set_state_machine_input_v1(self, resource, account_list) -> dict:
-
         local_file = StageFile(self.logger, resource.template_file)
         template_url = local_file.get_staged_file()
 
@@ -369,9 +343,7 @@ class BuildStateMachineInput:
         else:
             parameters = []
 
-        sm_params = self.param_handler.update_params(
-            parameters, account_list, region, False
-        )
+        sm_params = self.param_handler.update_params(parameters, account_list, region, False)
 
         ssm_parameters = self._create_ssm_input_map(resource.ssm_parameters)
 
@@ -390,7 +362,6 @@ class BuildStateMachineInput:
         return ss_input.input_map()
 
     def stack_set_state_machine_input_v2(self, resource, account_list) -> dict:
-
         local_file = StageFile(self.logger, resource.resource_file)
         template_url = local_file.get_staged_file()
 
@@ -415,9 +386,7 @@ class BuildStateMachineInput:
             self.logger.info(resource.parameters)
             parameters = self._load_params_from_file(resource.parameter_file)
 
-        sm_params = self.param_handler.update_params(
-            parameters, account_list, region, False
-        )
+        sm_params = self.param_handler.update_params(parameters, account_list, region, False)
 
         self.logger.info("Input Parameters for State Machine: {}".format(sm_params))
 
@@ -438,7 +407,6 @@ class BuildStateMachineInput:
         return ss_input.input_map()
 
     def _load_params_from_manifest(self, parameter_list: list):
-
         self.logger.info("Replace the keys with CloudFormation " "Parameter data type")
         params_list = []
         for item in parameter_list:
@@ -505,9 +473,7 @@ class OrganizationsData:
         else:
             # convert OU Name to OU IDs
             for ou_name in ou_list:
-                if (
-                    ":" in ou_name
-                ):  # Process nested OU. For example: TestOU1:TestOU2:TestOU3
+                if ":" in ou_name:  # Process nested OU. For example: TestOU1:TestOU2:TestOU3
                     ou_id = self.get_ou_id(ou_name, ":")
                     accounts_in_nested_ou.extend(self.get_active_accounts_in_ou(ou_id))
                     self.logger.debug(
@@ -516,11 +482,7 @@ class OrganizationsData:
                         )
                     )
                 else:
-                    ou_id = [
-                        value
-                        for key, value in ou_name_to_id_map.items()
-                        if ou_name == key
-                    ]
+                    ou_id = [value for key, value in ou_name_to_id_map.items() if ou_name == key]
                     ou_ids_manifest.extend(ou_id)
                     self.logger.debug(
                         "[manifest_parser.get_accounts_in_ou] ou_name: {}; ou_id: {}; ou_ids_manifest for non-nested ous: {}".format(
@@ -576,15 +538,11 @@ class OrganizationsData:
                     if name.lower() == key.lower()
                 ]
                 self.logger.info(f"==== name_account: {name_account}")
-                self.logger.info(
-                    "%%%%%%% Name {} -  Account {}".format(name, name_account)
-                )
+                self.logger.info("%%%%%%% Name {} -  Account {}".format(name, name_account))
                 new_account_list.extend(name_account)
         # Remove account ids from the manifest that is not
         # in the organization or not active
-        sanitized_account_list = list(
-            set(new_account_list).intersection(set(accounts_in_all_ous))
-        )
+        sanitized_account_list = list(set(new_account_list).intersection(set(accounts_in_all_ous)))
         self.logger.info("Print Updated Manifest Account List")
         self.logger.info(sanitized_account_list)
         # merge account lists manifest account list and
@@ -616,9 +574,7 @@ class OrganizationsData:
         # 2) Accounts for each OU at the root level.
         # use case: map OU Name to account IDs
         # key: OU ID (str); value: Active accounts (list)
-        accounts_in_all_ous, ou_id_to_account_map = self._get_accounts_in_ou(
-            org, all_ou_ids
-        )
+        accounts_in_all_ous, ou_id_to_account_map = self._get_accounts_in_ou(org, all_ou_ids)
 
         # Returns account name in manifest to account id mapping.
         # key: account name; value: account id
@@ -658,9 +614,7 @@ class OrganizationsData:
             # build list of all the OU IDs under Org root
             _all_ou_ids.append(ou_at_root_level.get("Id"))
             # build a list of ou id
-            _ou_name_to_id_map.update(
-                {ou_at_root_level.get("Name"): ou_at_root_level.get("Id")}
-            )
+            _ou_name_to_id_map.update({ou_at_root_level.get("Name"): ou_at_root_level.get("Id")})
 
         self.logger.info("Print OU Name to OU ID Map")
         self.logger.info(_ou_name_to_id_map)
@@ -729,14 +683,20 @@ class OrganizationsData:
         # Get ou id given an ou name
         final_ou_list = []
         for ou_name in ou_list:
-            ou_id = self.get_ou_id(ou_name, ":")
-            this_ou_list = [ou_name, ou_id]
-            final_ou_list.append(this_ou_list)
+            try:
+                self.logger.info(
+                    f"[manifest_parser.get_final_ou_list] Getting ID for OU: {ou_name}"
+                )
+                ou_id = self.get_ou_id(ou_name, ":")
+                this_ou_list = [ou_name, ou_id]
+                final_ou_list.append(this_ou_list)
+            except ValueError:
+                self.logger.warning(
+                    f"[manifest_parser.get_final_ou_list] OU: {ou_name} not found, ignoring"
+                )
 
         self.logger.info(
-            "[manifest_parser.get_final_ou_list] final_ou_list: {} ".format(
-                final_ou_list
-            )
+            "[manifest_parser.get_final_ou_list] final_ou_list: {} ".format(final_ou_list)
         )
 
         return final_ou_list
@@ -745,9 +705,7 @@ class OrganizationsData:
         org = Organizations(self.logger)
         response = org.list_roots()
         root_id = response["Roots"][0].get("Id")
-        self.logger.info(
-            "[manifest_parser.get_ou_id] Organizations Root Id: {}".format(root_id)
-        )
+        self.logger.info("[manifest_parser.get_ou_id] Organizations Root Id: {}".format(root_id))
 
         if nested_ou_name == "Root":
             return root_id
@@ -764,13 +722,9 @@ class OrganizationsData:
 
     def _get_ou_id(self, org, parent_id, nested_ou_name, delimiter):
         nested_ou_name_list = empty_separator_handler(delimiter, nested_ou_name)
-        response = self.list_ou_for_parent(
-            org, parent_id, list_sanitizer(nested_ou_name_list)
-        )
+        response = self.list_ou_for_parent(org, parent_id, list_sanitizer(nested_ou_name_list))
         self.logger.info(
-            "[manifest_parser._get_ou_id] _list_ou_for_parent response: {}".format(
-                response
-            )
+            "[manifest_parser._get_ou_id] _list_ou_for_parent response: {}".format(response)
         )
         return response
 
@@ -791,9 +745,7 @@ class OrganizationsData:
 
         for dictionary in ou_list:
             self.logger.debug(
-                "[manifest_parser.list_ou_id_for_parent] dictionary:{}".format(
-                    dictionary
-                )
+                "[manifest_parser.list_ou_id_for_parent] dictionary:{}".format(dictionary)
             )
             if dictionary.get("Name") == nested_ou_name_list[index]:
                 self.logger.info(
@@ -811,9 +763,7 @@ class OrganizationsData:
                     )
                     return dictionary.get("Id")
                 else:
-                    return self.list_ou_for_parent(
-                        org, dictionary.get("Id"), nested_ou_name_list
-                    )
+                    return self.list_ou_for_parent(org, dictionary.get("Id"), nested_ou_name_list)
 
     def get_active_accounts_in_ou(self, ou_id):
         """

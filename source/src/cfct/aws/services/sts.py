@@ -17,9 +17,10 @@
 
 from os import environ
 
+from boto3.session import Session
 from botocore.exceptions import ClientError
+
 from cfct.aws.utils.boto3_session import Boto3Session
-from cfct.aws.utils.get_partition import get_partition
 
 
 class AssumeRole(object):
@@ -28,15 +29,8 @@ class AssumeRole(object):
             sts = STS(logger)
             # assume role
             session_name = "custom-control-tower-session"
-            partition = get_partition()
-            role_arn = "%s%s%s%s%s%s" % (
-                "arn:",
-                partition,
-                ":iam::",
-                str(account),
-                ":role/",
-                environ.get("EXECUTION_ROLE_NAME"),
-            )
+            partition = sts.sts_client.meta.partition
+            role_arn = f"arn:{partition}:iam::{account}:role/{environ['EXECUTION_ROLE_NAME']}"
             credentials = sts.assume_role(role_arn, session_name)
             return credentials
         except ClientError as e:

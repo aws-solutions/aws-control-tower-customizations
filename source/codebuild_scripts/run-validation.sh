@@ -27,6 +27,7 @@ exit_shell_script() {
 
 validate_template_file() {
   echo "Running aws cloudformation validate-template on $template_url"
+  # TODO: Verify if this works if resource file is homed in opt-in region, and CT mgmt is homed in commercial region
   aws cloudformation validate-template --template-url "$template_url" --region "$AWS_REGION"
   if [ $? -ne 0 ]
   then

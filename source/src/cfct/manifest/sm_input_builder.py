@@ -13,8 +13,8 @@
 #  and limitations under the License.                                         #
 ###############################################################################
 
+import os
 from abc import ABC, abstractmethod
-from os import getenv
 
 
 class StateMachineInput(ABC):
@@ -45,7 +45,7 @@ class InputBuilder(StateMachineInput):
             "RequestType": self._request_type,
             "ResourceProperties": self._resource_properties,
         }
-        if getenv("STAGE_NAME").upper() == "STACKSET":
+        if os.environ["STAGE_NAME"].upper() == "STACKSET":
             input_map.update({"SkipUpdateStackSet": self._skip_stack_set})
         return input_map
 

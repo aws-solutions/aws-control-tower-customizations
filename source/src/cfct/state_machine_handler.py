@@ -21,6 +21,7 @@ import time
 from random import randint
 
 from botocore.exceptions import ClientError
+
 from cfct.aws.services.cloudformation import Stacks, StackSet
 from cfct.aws.services.organizations import Organizations as Org
 from cfct.aws.services.s3 import S3
@@ -44,9 +45,7 @@ class CloudFormation(object):
         self.logger.info(event)
 
     def describe_stack_set(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
 
         # add loop flag to handle Skip StackSet Update choice
@@ -77,9 +76,7 @@ class CloudFormation(object):
         return self.event
 
     def describe_stack_set_operation(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
         self.event.update({"RetryDeleteFlag": False})
 
@@ -118,8 +115,7 @@ class CloudFormation(object):
                         # ends up with 'DELETE_FAILED' state
                         # so it should try again
                         if (
-                            e.response["Error"]["Code"]
-                            == "StackInstanceNotFoundException"
+                            e.response["Error"]["Code"] == "StackInstanceNotFoundException"
                             and self.event.get("RequestType") == "Delete"
                         ):
                             self.logger.exception(
@@ -135,60 +131,21 @@ class CloudFormation(object):
         return self.event
 
     def list_stack_instances_account_ids(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
 
-        if (
-            self.event.get("NextToken") is None
-            or self.event.get("NextToken") == "Complete"
-        ):
-            accounts = []
-        else:
-            accounts = self.event.get("StackInstanceAccountList", [])
-
-        # Check if stack instances exist
         stack_set = StackSet(self.logger)
-        if (
-            self.event.get("NextToken") is not None
-            and self.event.get("NextToken") != "Complete"
-        ):
-            response = stack_set.list_stack_instances(
-                StackSetName=self.params.get("StackSetName"),
-                MaxResults=20,
-                NextToken=self.event.get("NextToken"),
-            )
-        else:
-            response = stack_set.list_stack_instances(
-                StackSetName=self.params.get("StackSetName"), MaxResults=20
-            )
 
-        self.logger.info("List SI Accounts Response")
-        self.logger.info(response)
+        accounts = []
+        paginator = stack_set.cfn_client.get_paginator("list_stack_instances")
+        pages = paginator.paginate(
+            StackSetName=self.params.get("StackSetName"), PaginationConfig={"PageSize": 100}
+        )
+        for page in pages:
+            for summary in page["Summaries"]:
+                accounts.append(summary["Account"])
 
-        if response:
-            if not response.get("Summaries"):  # 'True' if list is empty
-                self.event.update({"NextToken": "Complete"})
-                self.logger.info(
-                    "No existing stack instances found." " (Summaries List: Empty)"
-                )
-            else:
-                for instance in response.get("Summaries"):
-                    account_id = instance.get("Account")
-                    accounts.append(account_id)
-                self.event.update({"StackInstanceAccountList": list(set(accounts))})
-                self.logger.info(
-                    "Next Token Returned: {}".format(response.get("NextToken"))
-                )
-
-                if response.get("NextToken") is None:
-                    self.event.update({"NextToken": "Complete"})
-                    self.logger.info(
-                        "No existing stack instances found." " (Summaries List: Empty)"
-                    )
-                else:
-                    self.event.update({"NextToken": response.get("NextToken")})
+        self.event.update({"StackInstanceAccountList": list(set(accounts))})
         return self.event
 
     def list_stack_instances(self):
@@ -202,9 +159,7 @@ class CloudFormation(object):
 
         Raises:
         """
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
 
         if "ParameterOverrides" in self.params.keys():
@@ -219,9 +174,7 @@ class CloudFormation(object):
 
         # if account list is not present then only create StackSet
         # and skip stack instance creation
-        if type(self.params.get("AccountList")) is not list or not self.params.get(
-            "AccountList"
-        ):
+        if type(self.params.get("AccountList")) is not list or not self.params.get("AccountList"):
             self._set_skip_stack_instance_operation()
             return self.event
         else:  # proceed if account list exists
@@ -232,27 +185,23 @@ class CloudFormation(object):
             if (
                 self.event.get("ActiveAccountList") is not None
                 and self.event.get("ActiveRegionList") is not None
-                and self.params.get("AccountList")
-                != self.event.get("ActiveAccountList")
+                and self.params.get("AccountList") != self.event.get("ActiveAccountList")
             ):
                 account_id = self._add_list(
                     self.params.get("AccountList"), self.event.get("ActiveAccountList")
                 )[0]
 
-            self.logger.info(
-                "Account Id for list stack instance: {}".format(account_id)
-            )
+            self.logger.info("Account Id for list stack instance: {}".format(account_id))
 
             if (
                 self.event.get("NextToken") is not None
                 and self.event.get("NextToken") != "Complete"
             ):
-
                 self.logger.info("Found next token")
                 response = stack_set.list_stack_instances(
                     StackSetName=self.params.get("StackSetName"),
                     StackInstanceAccount=account_id,
-                    MaxResults=20,
+                    MaxResults=100,
                     NextToken=self.event.get("NextToken"),
                 )
             else:
@@ -260,11 +209,9 @@ class CloudFormation(object):
                 response = stack_set.list_stack_instances(
                     StackSetName=self.params.get("StackSetName"),
                     StackInstanceAccount=account_id,
-                    MaxResults=20,
+                    MaxResults=100,
                 )
-            self.logger.info(
-                "List Stack Instance Response" " for account: {}".format(account_id)
-            )
+            self.logger.info("List Stack Instance Response" " for account: {}".format(account_id))
             self.logger.info(response)
 
             if response is not None:
@@ -278,7 +225,6 @@ class CloudFormation(object):
                     not response.get("Summaries")
                     and self.event.get("StackInstanceAccountList") is None
                 ):
-
                     self._set_only_create_stack_instance_operation()
                     return self.event
 
@@ -298,9 +244,7 @@ class CloudFormation(object):
                     )
 
                     if response.get("Summaries"):
-                        self.logger.info(
-                            "Found existing stack instance for " "AccountList."
-                        )
+                        self.logger.info("Found existing stack instance for " "AccountList.")
                         self.event.update({"InstanceExist": "yes"})
                         existing_region_list = self._get_existing_stack_instance_info(
                             response.get("Summaries"), existing_region_list
@@ -317,24 +261,20 @@ class CloudFormation(object):
                         response = stack_set.list_stack_instances(
                             StackSetName=self.params.get("StackSetName"),
                             StackInstanceAccount=account_id,
-                            MaxResults=20,
+                            MaxResults=100,
                         )
                         self.logger.info(
-                            "List Stack Instance Response for"
-                            " StackInstanceAccountList"
+                            "List Stack Instance Response for" " StackInstanceAccountList"
                         )
                         self.logger.info(response)
 
                         if response.get("Summaries"):
                             self.logger.info(
-                                "Found existing stack instances "
-                                "for StackInstanceAccountList."
+                                "Found existing stack instances " "for StackInstanceAccountList."
                             )
                             self.event.update({"InstanceExist": "yes"})
-                            existing_region_list = (
-                                self._get_existing_stack_instance_info(
-                                    response.get("Summaries"), existing_region_list
-                                )
+                            existing_region_list = self._get_existing_stack_instance_info(
+                                response.get("Summaries"), existing_region_list
                             )
                         else:
                             existing_region_list = self.params.get("RegionList")
@@ -343,12 +283,9 @@ class CloudFormation(object):
                         "Updated existing region List: {}".format(existing_region_list)
                     )
 
-                    self.logger.info(
-                        "Next Token Returned: {}".format(response.get("NextToken"))
-                    )
+                    self.logger.info("Next Token Returned: {}".format(response.get("NextToken")))
 
                     if response.get("NextToken") is None:
-
                         (
                             add_region_list,
                             delete_region_list,
@@ -364,9 +301,7 @@ class CloudFormation(object):
                             delete_account_list,
                         )
                         self._update_event_for_add(add_account_list, add_region_list)
-                        self._update_event_for_delete(
-                            delete_account_list, delete_region_list
-                        )
+                        self._update_event_for_delete(delete_account_list, delete_region_list)
                         self.event.update({"ExistingRegionList": existing_region_list})
                     else:
                         self.event.update({"NextToken": response.get("NextToken")})
@@ -395,9 +330,7 @@ class CloudFormation(object):
         else:
             self.event.update({"LoopFlag": "no"})
 
-    def _get_add_delete_region_account_list(
-        self, existing_region_list, existing_account_list
-    ):
+    def _get_add_delete_region_account_list(self, existing_region_list, existing_account_list):
         """build region and account list for adding and deleting
            stack instances operations.
 
@@ -408,20 +341,14 @@ class CloudFormation(object):
         self.logger.info("Existing account list: {}".format(existing_account_list))
 
         # replace the region list in the self.event
-        add_region_list = self._add_list(
-            self.params.get("RegionList"), existing_region_list
-        )
+        add_region_list = self._add_list(self.params.get("RegionList"), existing_region_list)
         self.logger.info("Add region list: {}".format(add_region_list))
 
         # Build a region list if the event is from AVM
-        delete_region_list = self._delete_list(
-            self.params.get("RegionList"), existing_region_list
-        )
+        delete_region_list = self._delete_list(self.params.get("RegionList"), existing_region_list)
         self.logger.info("Delete region list: {}".format(delete_region_list))
 
-        add_account_list = self._add_list(
-            self.params.get("AccountList"), existing_account_list
-        )
+        add_account_list = self._add_list(self.params.get("AccountList"), existing_account_list)
         self.logger.info("Add account list: {}".format(add_account_list))
 
         delete_account_list = self._delete_list(
@@ -473,9 +400,7 @@ class CloudFormation(object):
         self.event.update({"CreateInstance": "yes"})
         # delete stack instance set to no
         self.event.update({"DeleteInstance": "no"})
-        self.logger.info(
-            "No existing stack instances found." " (Summaries List: Empty)"
-        )
+        self.logger.info("No existing stack instances found." " (Summaries List: Empty)")
 
     def _set_skip_stack_instance_operation(self):
         """Set values as input for step function to
@@ -552,16 +477,13 @@ class CloudFormation(object):
             elif type(value) is str and value.startswith("_alfred_decapsulation_"):
                 decapsulated_value = value[(len("_alfred_decapsulation_") + 1) :]
                 self.logger.info(
-                    "Removing decapsulation header."
-                    " Printing decapsulated value below:"
+                    "Removing decapsulation header." " Printing decapsulated value below:"
                 )
                 copy.update({key: decapsulated_value})
         return copy
 
     def create_stack_set(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
 
         # Create a new stack set
@@ -592,9 +514,7 @@ class CloudFormation(object):
         return self.event
 
     def create_stack_instances(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
 
         # Create stack instances
@@ -623,9 +543,7 @@ class CloudFormation(object):
             # all regions. new stack instances in new region
             # for existing accounts will be deployed in the second round
             if self.event.get("ActiveAccountList") is not None:
-                if self.event.get("ActiveAccountList") == self.event.get(
-                    "AddAccountList"
-                ):
+                if self.event.get("ActiveAccountList") == self.event.get("AddAccountList"):
                     account_list = self._add_list(
                         self.params.get("AccountList"),
                         self.event.get("ActiveAccountList"),
@@ -641,14 +559,10 @@ class CloudFormation(object):
         self.logger.info("Create stack instances for accounts: {}".format(account_list))
         self.logger.info("Create stack instances in regions:  {}".format(region_list))
 
-        self.logger.info(
-            "Creating StackSet Instance: {}".format(self.params.get("StackSetName"))
-        )
+        self.logger.info("Creating StackSet Instance: {}".format(self.params.get("StackSetName")))
         if "ParameterOverrides" in self.params:
             self.logger.info("Found 'ParameterOverrides' key in the event.")
-            parameters = self._get_ssm_secure_string(
-                self.params.get("ParameterOverrides")
-            )
+            parameters = self._get_ssm_secure_string(self.params.get("ParameterOverrides"))
             response = stack_set.create_stack_instances_with_override_params(
                 self.params.get("StackSetName"), account_list, region_list, parameters
             )
@@ -663,16 +577,12 @@ class CloudFormation(object):
 
     def update_stack_set(self):
         # Updates the stack set and all associated stack instances.
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
         stack_set = StackSet(self.logger)
 
         # Update existing StackSet
-        self.logger.info(
-            "Updating Stack Set: {}".format(self.params.get("StackSetName"))
-        )
+        self.logger.info("Updating Stack Set: {}".format(self.params.get("StackSetName")))
 
         parameters = self._get_ssm_secure_string(self.params.get("Parameters"))
         response = stack_set.update_stack_set(
@@ -689,9 +599,7 @@ class CloudFormation(object):
         return self.event
 
     def update_stack_instances(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
 
         stack_set = StackSet(self.logger)
@@ -715,22 +623,16 @@ class CloudFormation(object):
         return self.event
 
     def delete_stack_set(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
         # Delete StackSet
         stack_set = StackSet(self.logger)
-        self.logger.info(
-            "Deleting StackSet: {}".format(self.params.get("StackSetName"))
-        )
+        self.logger.info("Deleting StackSet: {}".format(self.params.get("StackSetName")))
         self.logger.info(stack_set.delete_stack_set(self.params.get("StackSetName")))
         return self.event
 
     def delete_stack_instances(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
 
         # set to default values (new instance creation)
@@ -768,9 +670,7 @@ class CloudFormation(object):
 
         # Delete stack_set_instance(s)
         stack_set = StackSet(self.logger)
-        self.logger.info(
-            "Deleting Stack Instance: {}".format(self.params.get("StackSetName"))
-        )
+        self.logger.info("Deleting Stack Instance: {}".format(self.params.get("StackSetName")))
 
         response = stack_set.delete_stack_instances(
             self.params.get("StackSetName"), account_list, region_list
@@ -809,16 +709,10 @@ class ServiceControlPolicy(object):
         json.loads(policy_file_content)
         # Return the Escaped JSON text
 
-        return (
-            policy_file_content.replace('"', '"')
-            .replace("\n", "\r\n")
-            .replace("  ", "")
-        )
+        return policy_file_content.replace('"', '"').replace("\n", "\r\n").replace("  ", "")
 
     def list_policies(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
         # Check if PolicyName attribute exists in event,
         # if so, it is called for attach or detach policy
@@ -849,9 +743,7 @@ class ServiceControlPolicy(object):
         return self.event
 
     def create_policy(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
         policy_doc = self.params.get("PolicyDocument")
 
@@ -869,9 +761,7 @@ class ServiceControlPolicy(object):
         return self.event
 
     def update_policy(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
         policy_doc = self.params.get("PolicyDocument")
         policy_id = self.event.get("PolicyId")
@@ -892,9 +782,7 @@ class ServiceControlPolicy(object):
         return self.event
 
     def delete_policy(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
         policy_id = self.event.get("PolicyId")
 
@@ -907,9 +795,7 @@ class ServiceControlPolicy(object):
         return self.event
 
     def attach_policy(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
         if self.params.get("AccountId") == "":
             target_id = self.event.get("OUId")
@@ -919,16 +805,12 @@ class ServiceControlPolicy(object):
         scp = SCP(self.logger)
         scp.attach_policy(policy_id, target_id)
         self.logger.info("Attach Policy")
-        status = "Policy: {} attached successfully to Target: {}".format(
-            policy_id, target_id
-        )
+        status = "Policy: {} attached successfully to Target: {}".format(policy_id, target_id)
         self.event.update({"Status": status})
         return self.event
 
     def detach_policy(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
         if self.params.get("AccountId") == "":
             target_id = self.event.get("OUId")
@@ -938,16 +820,12 @@ class ServiceControlPolicy(object):
         scp = SCP(self.logger)
         scp.detach_policy(policy_id, target_id)
         self.logger.info("Detach Policy Response")
-        status = "Policy: {} detached successfully from Target: {}".format(
-            policy_id, target_id
-        )
+        status = "Policy: {} detached successfully from Target: {}".format(policy_id, target_id)
         self.event.update({"Status": status})
         return self.event
 
     def list_policies_for_ou(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
         ou_name = self.event.get("OUName")
         policy_name = self.params.get("PolicyDocument").get("Name")
@@ -960,13 +838,9 @@ class ServiceControlPolicy(object):
         return self.event
 
     def list_policies_for_account(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
-        self.list_policies_for_target(
-            self.params.get("AccountId"), self.event.get("PolicyName")
-        )
+        self.list_policies_for_target(self.params.get("AccountId"), self.event.get("PolicyName"))
         return self.event
 
     def list_policies_for_target(self, target_id, policy_name):
@@ -991,9 +865,7 @@ class ServiceControlPolicy(object):
         self.event.update({"PolicyAttached": "no"})
 
     def detach_policy_from_all_accounts(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
         policy_id = self.event.get("PolicyId")
         scp = SCP(self.logger)
@@ -1010,9 +882,7 @@ class ServiceControlPolicy(object):
                 scp.detach_policy(policy_id, account_id)
                 accounts.append(account_id)
 
-        status = "Policy: {} detached successfully from Accounts: {}".format(
-            policy_id, accounts
-        )
+        status = "Policy: {} detached successfully from Accounts: {}".format(policy_id, accounts)
         self.event.update({"Status": status})
         return self.event
 
@@ -1042,9 +912,7 @@ class StackSetSMRequests(object):
         self.ssm = SSM(self.logger)
 
     def export_cfn_output(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
 
         regions = self.params.get("RegionList")
@@ -1054,8 +922,7 @@ class StackSetSMRequests(object):
 
         if len(accounts) == 0 or len(regions) == 0:
             self.logger.info(
-                "Either AccountList or RegionList empty; so "
-                "skipping the export_cfn_output "
+                "Either AccountList or RegionList empty; so " "skipping the export_cfn_output "
             )
             return self.event
 
@@ -1066,18 +933,14 @@ class StackSetSMRequests(object):
         region = regions[0]
 
         # First retrieve the Stack ID from the target account,
-        # region deployed via the StackSet
+        # & region deployed via the StackSet
         response = stack_set.describe_stack_instance(stack_set_name, account, region)
 
-        stack_id, stack_name = self._retrieve_stack_info(
-            response, stack_set_name, account, region
-        )
+        stack_id, stack_name = self._retrieve_stack_info(response, stack_set_name, account, region)
 
         # instantiate STS class
         _assume_role = AssumeRole()
-        cfn = Stacks(
-            self.logger, region, credentials=_assume_role(self.logger, account)
-        )
+        cfn = Stacks(self.logger, region, credentials=_assume_role(self.logger, account))
         response = cfn.describe_stacks(stack_id)
         stacks = response.get("Stacks")
 
@@ -1126,9 +989,7 @@ class StackSetSMRequests(object):
             self.logger.info("Found Stack: {}".format(stack.get("StackName")))
             self.logger.info(
                 "Exporting Output of Stack: {} from "
-                "Account: {} and region: {}".format(
-                    stack.get("StackName"), str(account), region
-                )
+                "Account: {} and region: {}".format(stack.get("StackName"), str(account), region)
             )
             outputs = stack.get("Outputs")
             if outputs is not None and type(outputs) is list:
@@ -1146,9 +1007,7 @@ class StackSetSMRequests(object):
                 yield key, value
 
     def ssm_put_parameters(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         self.logger.info(self.params)
         ssm_params = self.params.get("SSMParameters")
         ssm_value = "NotFound"
@@ -1185,28 +1044,21 @@ class StackSetSMRequests(object):
             # Print error if the key is not found in the State Machine output.
             # Handle scenario if only StackSet is created not stack instances.
             self.logger.error(
-                "Unable to find the key: {} in the"
-                " State Machine Output".format(value)
+                "Unable to find the key: {} in the" " State Machine Output".format(value)
             )
         else:
-            self.logger.info(
-                "Adding value for SSM Parameter Store" " Key: {}".format(key)
-            )
+            self.logger.info("Adding value for SSM Parameter Store" " Key: {}".format(key))
             self.ssm.put_parameter(key, ssm_value)
 
     def send_execution_data(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         send = SolutionMetrics(self.logger)
         data = {"StateMachineExecutionCount": "1"}
         send.solution_metrics(data)
         return self.event
 
     def random_wait(self):
-        self.logger.info(
-            "Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3]
-        )
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
         # Random wait between 1 to 14 minutes
         _seconds = randint(60, 840)
         time.sleep(_seconds)

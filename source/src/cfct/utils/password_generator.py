@@ -27,9 +27,7 @@ def random_pwd_generator(length, additional_str=""):
     Returns:
         password
     """
-    chars = (
-        string.ascii_uppercase + string.ascii_lowercase + string.digits + additional_str
-    )
+    chars = string.ascii_uppercase + string.ascii_lowercase + string.digits + additional_str
     # Making sure the password has two numbers and symbols at the very least
     password = (
         "".join(random.SystemRandom().choice(chars) for _ in range(length - 4))

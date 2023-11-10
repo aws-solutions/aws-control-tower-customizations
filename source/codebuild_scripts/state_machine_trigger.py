@@ -142,5 +142,5 @@ def launch_state_machine_execution(
 
 if __name__ == "__main__":
     os.environ["LOG_LEVEL"] = sys.argv[1]
-    logger = Logger(loglevel=os.environ["LOG_LEVEL"])
+    logger = Logger(loglevel=os.getenv("LOG_LEVEL", "info"))
     main()

@@ -15,7 +15,11 @@
 
 # !/bin/python
 
+import time
+from typing import List
+
 from botocore.exceptions import ClientError
+
 from cfct.aws.utils.boto3_session import Boto3Session
 
 
@@ -113,27 +117,51 @@ class ServiceControlPolicy(Boto3Session):
         except ClientError as e:
             if e.response["Error"]["Code"] == "PolicyNotAttachedException":
                 self.logger.exception(
-                    "Caught exception "
-                    "'PolicyNotAttachedException',"
-                    " taking no action..."
+                    "Caught exception " "'PolicyNotAttachedException'," " taking no action..."
                 )
                 return
             else:
                 self.logger.log_unhandled_exception(e)
                 raise
 
-    def enable_policy_type(self, root_id):
-        try:
-            self.org_client.enable_policy_type(
-                RootId=root_id, PolicyType="SERVICE_CONTROL_POLICY"
+    def enable_policy_type(self, root_id, wait_time_sec=5) -> None:
+        max_retries = 3
+        attempts = 0
+
+        while attempts < max_retries:
+            # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/list-roots.html#examples
+            # Before trying to enable, check what policy types are already enabled
+            policy_type_metadata: List[dict] = self.org_client.list_roots()["Roots"][0].get(
+                "PolicyTypes", []
             )
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "PolicyTypeAlreadyEnabledException":
-                self.logger.exception(
-                    "Caught "
-                    "PolicyTypeAlreadyEnabledException',"
-                    " taking no action..."
+            for policy_metadata in policy_type_metadata:
+                if policy_metadata["Type"] == "SERVICE_CONTROL_POLICY":
+                    if policy_metadata["Status"] == "ENABLED":
+                        self.logger.info("SCPs are already enabled, exiting without action")
+                        return
+
+            # SCPs are not enabled - enable them
+            try:
+                self.org_client.enable_policy_type(
+                    RootId=root_id, PolicyType="SERVICE_CONTROL_POLICY"
                 )
-            else:
-                self.logger.log_unhandled_exception(e)
-                raise
+                return
+            except ClientError as e:
+                if e.response["Error"]["Code"] == "PolicyTypeAlreadyEnabledException":
+                    self.logger.exception(
+                        "Caught PolicyTypeAlreadyEnabledException, taking no action..."
+                    )
+                    return
+                elif e.response["Error"]["Code"] == "ConcurrentModificationException":
+                    # Another instance of the CFCT SFN is enabling SPCs, sleep and retry
+                    attempts += 1
+                    time.sleep(wait_time_sec)
+                    continue
+                else:
+                    self.logger.log_unhandled_exception(e)
+                    raise
+
+        # Exceeded retries without finding SCPs enabled
+        error_msg = f"Unable to enable SCPs in the organization after {max_retries} attempts"
+        self.logger.log_unhandled_exception(error_msg)
+        raise Exception(error_msg)

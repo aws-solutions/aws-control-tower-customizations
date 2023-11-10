@@ -18,8 +18,8 @@ from datetime import datetime
 from json import dumps
 
 import requests
+
 from cfct.aws.services.ssm import SSM
-from cfct.utils.decimal_encoder import DecimalEncoder
 
 
 class SolutionMetrics(object):
@@ -47,7 +47,6 @@ class SolutionMetrics(object):
         solution_id=os.environ.get("SOLUTION_ID"),
         url=os.environ.get("METRICS_URL"),
     ):
-
         """Sends anonymous customer metrics to s3 via API gateway owned and
            managed by the Solutions Builder team.
 
@@ -65,7 +64,7 @@ class SolutionMetrics(object):
                 time_stamp = {"TimeStamp": str(datetime.utcnow().isoformat())}
                 params = {"Solution": solution_id, "UUID": uuid, "Data": data}
                 metrics = dict(time_stamp, **params)
-                json_data = dumps(metrics, cls=DecimalEncoder)
+                json_data = dumps(metrics)
                 headers = {"content-type": "application/json"}
                 r = requests.post(url, data=json_data, headers=headers)
                 code = r.status_code

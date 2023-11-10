@@ -41,19 +41,6 @@ def sanitize(name, space_allowed=False, replace_with_character="_"):
     return sanitized_name
 
 
-def trim_length_from_end(string, length):
-    """Trims the length of the given string to the given length
-
-    :param string:
-    :param length:
-    :return: trimmed string to the length provided
-    """
-    if len(string) > length:
-        return string[:length]
-    else:
-        return string
-
-
 def trim_string_from_front(string, remove_starts_with_string):
     """Remove string provided in the search_string
     and returns remainder of the string.
@@ -64,24 +51,7 @@ def trim_string_from_front(string, remove_starts_with_string):
     if string.startswith(remove_starts_with_string):
         return string[len(remove_starts_with_string) :]
     else:
-        raise ValueError(
-            "The beginning of the string does " "not match the string to be trimmed."
-        )
-
-
-def extract_string(search_str):
-    return str[len(search_str) :]
-
-
-def convert_list_values_to_string(_list):
-    return list(map(str, _list))
-
-
-def convert_string_to_list(_string, separator=","):
-    """
-    splits the string with give separator and remove whitespaces
-    """
-    return [x.strip() for x in _string.split(separator)]
+        raise ValueError("The beginning of the string does " "not match the string to be trimmed.")
 
 
 def strip_list_items(array):

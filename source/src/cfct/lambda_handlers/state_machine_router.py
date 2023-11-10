@@ -18,11 +18,7 @@
 import inspect
 import os
 
-from cfct.state_machine_handler import (
-    CloudFormation,
-    ServiceControlPolicy,
-    StackSetSMRequests,
-)
+from cfct.state_machine_handler import CloudFormation, ServiceControlPolicy, StackSetSMRequests
 from cfct.utils.logger import Logger
 
 # initialise logger
@@ -136,11 +132,7 @@ def service_control_policy(event, function_name):
         event.update({"Step": step})
         event.update({"Continue": _continue})
         if ou_map:  # ou list example: [['ouname1','ouid1],'Attach']
-            logger.info(
-                "[state_machine_router.service_control_policy] ou_map:  {}".format(
-                    ou_map
-                )
-            )
+            logger.info("[state_machine_router.service_control_policy] ou_map:  {}".format(ou_map))
             logger.debug(
                 "[state_machine_router.service_control_policy] OUName: {}; OUId: {}; Operation: {}".format(
                     ou_map[0][0], ou_map[0][1], ou_map[1]
