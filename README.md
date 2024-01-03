@@ -60,4 +60,4 @@ This solution collects anonymous operational metrics to help AWS improve the qua
 
 ## License
 
-See license [here](https://github.com/aws-solutions/aws-control-tower-customizations/blob/main/LICENSE.txt) 
+See the license [here](https://github.com/aws-solutions/aws-control-tower-customizations/blob/main/LICENSE.txt) 
