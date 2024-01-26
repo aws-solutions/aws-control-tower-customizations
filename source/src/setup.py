@@ -27,6 +27,7 @@ setuptools.setup(
     package_data={"cfct": ["validation/*.yaml"]},
     python_requires=">=3.8",
     install_requires=[
+        "PyYAML==5.3.1",
         "yorm==1.6.2",
         "Jinja2==2.11.3",
         "MarkupSafe==2.0.1",  # https://github.com/pallets/jinja/issues/1585
