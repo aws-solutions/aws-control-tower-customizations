@@ -19,15 +19,16 @@ setuptools.setup(
     long_description=long_description,
     url="https://github.com/aws-solutions/aws-control-tower-customizations",
     classifiers=[
-        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.11",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
     packages=setuptools.find_packages(exclude=["tests"]),
     package_data={"cfct": ["validation/*.yaml"]},
-    python_requires=">=3.8",
+    python_requires=">=3.11",
     install_requires=[
         "yorm==1.6.2",
+        "PyYAML==5.3.1",
         "Jinja2==2.11.3",
         "MarkupSafe==2.0.1",  # https://github.com/pallets/jinja/issues/1585
         "requests==2.25.1",
@@ -40,7 +41,7 @@ setuptools.setup(
         "test": [
             "mypy>=1.3.0",
             "mock==4.0.3",
-            "moto",
+            "moto==4.2.14",
             "pytest-mock==3.5.1",
             "pytest-runner==5.2",
             "uuid==1.30",
