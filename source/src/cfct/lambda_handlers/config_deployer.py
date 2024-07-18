@@ -39,13 +39,27 @@ init_failed = False
 kms = KMS(logger)
 ssm = SSM(logger)
 
+def safe_extract(zip_file_name, output_path, max_files = 1000, max_size = 500 * 1024 * 1024):
+    with zipfile.ZipFile(zip_file_name, "r") as zip_file:
+        # Get the list of files
+        file_list = zip_file.infolist()
+
+        # Check the number of files
+        if len(file_list) > max_files:
+            raise Exception(f"The number of files in the ZIP archive exceeds {max_files}.")
+
+        # Check the total size of files
+        total_size = sum(file.file_size for file in file_list)
+        if total_size > max_size:
+            raise Exception(f"The total size of files in the ZIP archive exceeds {max_size}.")
+
+        for file in file_list:
+            zip_file.extract(file, output_path)
 
 def unzip_function(zip_file_name, function_path, output_path):
     orig_path = os.getcwd()
     os.chdir(function_path)
-    zip_file = zipfile.ZipFile(zip_file_name, "r")
-    zip_file.extractall(output_path)
-    zip_file.close()
+    safe_extract(zip_file_name, output_path)
     os.chdir(orig_path)
 
 

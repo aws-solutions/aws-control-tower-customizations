@@ -19,14 +19,20 @@ import subprocess
 import sys
 
 from cfct.utils.logger import Logger
-
+from cfct.utils.path_utils import is_safe_path
 
 def _read_file(file):
     if os.path.isfile(file):
         logger.info("File - {} exists".format(file))
         logger.info("Reading from {}".format(file))
-        with open(file) as f:
-            return json.load(f)
+        base_directory = os.getcwd()
+        if is_safe_path(base_directory, file):
+            abs_file = os.path.abspath(file)
+            with open(abs_file) as f:
+                return json.load(f)
+        else:
+            logger.error(f"Invalid file path detected for {file}")
+            sys.exit(1)
     else:
         logger.error("File: {} not found.".format(file))
         sys.exit(1)

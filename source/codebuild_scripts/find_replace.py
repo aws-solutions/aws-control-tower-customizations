@@ -22,6 +22,7 @@ import sys
 
 import yaml
 from cfct.utils.logger import Logger
+from cfct.utils.path_utils import is_safe_path
 from jinja2 import Environment, FileSystemLoader
 
 # initialise logger
@@ -31,7 +32,6 @@ logger = Logger(loglevel=log_level)
 
 def find_replace(function_path, file_name, destination_file, parameters):
     try:
-
         j2loader = FileSystemLoader(function_path)
         j2env = Environment(loader=j2loader, autoescape=True)  # Compliant
         j2template = j2env.get_template(file_name)
@@ -44,8 +44,12 @@ def find_replace(function_path, file_name, destination_file, parameters):
             dictionary.update({key: value})
         logger.debug(dictionary)
         output = j2template.render(dictionary)
-        with open(destination_file, "w") as fh:
-            fh.write(output)
+        if is_safe_path(function_path, destination_file):
+            abs_destination_file = os.path.abspath(destination_file)
+            with open(abs_destination_file, "w") as fh:
+                fh.write(output)
+        else:
+            raise ValueError(f"Unsafe file path detected {destination_file}")
     except Exception as e:
         logger.log_general_exception(__file__.split("/")[-1], inspect.stack()[0][3], e)
         raise
@@ -96,13 +100,17 @@ def sanitize_null_type(d, none_type_values):
 
 def generate_event(user_input_file, path, bools, none_types):
     logger.info("Generating Event")
-    with open(user_input_file) as f:
-        user_input = sanitize_boolean_type(f.read(), bools)
-        logger.info("Boolean values wrapped with quotes (if applicable)")
-        logger.info(user_input)
-        user_input = sanitize_null_type(user_input, none_types)
-        logger.info("Null values replaced with quotes (if applicable)")
-        logger.info(user_input)
+    if is_safe_path(path, user_input_file):
+        abs_user_path = os.path.abspath(user_input_file)
+        with open(abs_user_path) as f:
+            user_input = sanitize_boolean_type(f.read(), bools)
+            logger.info("Boolean values wrapped with quotes (if applicable)")
+            logger.info(user_input)
+            user_input = sanitize_null_type(user_input, none_types)
+            logger.info("Null values replaced with quotes (if applicable)")
+            logger.info(user_input)
+    else:
+        raise ValueError(f"Unsafe file path detected {user_input_file}")
     update_add_on_manifest(user_input, path)
 
 

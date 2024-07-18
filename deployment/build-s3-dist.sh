@@ -136,6 +136,10 @@ declare -a region_list=(
     "us-gov-west-1"
     "us-west-1"
     "us-west-2"
+    "il-central-1"
+    "me-central-1"
+    "ap-south-2"
+    "ap-southeast-3"
 )
 for region in "${region_list[@]}"
 do

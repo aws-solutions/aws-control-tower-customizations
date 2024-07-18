@@ -34,8 +34,8 @@ setuptools.setup(
         "requests==2.25.1",
         "markdown_to_json==1.0.0",
         "python-dateutil==2.8.1",
-        "boto3==1.20.15",
-        "botocore==1.23.15",
+        "boto3==1.28.17",
+        "botocore==1.31.17",
     ],
     extras_require={
         "test": [

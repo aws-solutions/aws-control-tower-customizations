@@ -4,6 +4,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.1] - 2024-05-30
+* Update dependencies & runtimes ([#186]((https://github.com/aws-solutions/aws-control-tower-customizations/issues/186)), [#193]((https://github.com/aws-solutions/aws-control-tower-customizations/issues/193)))
+  * Building the solution from source now requires Python 3.11 or higher
+  * Update Python Lambda runtimes to 3.11
+  * Update Ruby version to 3.3
+  * Update CodeBuild container image to `aws/codebuild/standard:7.0`
+* Pinned version for `PyYAML`  to 5.3.1 due to [yaml/pyyaml#724](https://github.com/yaml/pyyaml/issues/724) ([#183](https://github.com/aws-solutions/aws-control-tower-customizations/issues/183), [#184](https://github.com/aws-solutions/aws-control-tower-customizations/issues/184))
+* Pinned version for `moto` to 4.2.14.
+* Add `UpdateReplacePolicy` and `DeletionPolicy` to lifecycle event queue and DLQ to improve deployment safety.
+
+## [2.7.0] - 2023-11-10
+- Resolve `ConcurrentModificationException` errors that occur during parallel SCP deployments due to a race condition when enabling SCPs [#175](https://github.com/aws-solutions/aws-control-tower-customizations/issues/175)
+- Improve performance when querying for StackSet instance account IDs in large organizations [#174](https://github.com/aws-solutions/aws-control-tower-customizations/issues/174)
+- The CFCT pipeline now triggers on `UpdateManagedAccount` Control Tower lifecycle events, in addition to `CreateManagedAccount` events [#173](https://github.com/aws-solutions/aws-control-tower-customizations/issues/173)
+- Honor the `CodeCommitBranchName` stack parameter on the CFCT repo’s initial commit. The example code is now committed to your chosen branch instead of `main` [#117](https://github.com/aws-solutions/aws-control-tower-customizations/issues/117)
+- Enable the use of privately registered CloudFormation resources in customization templates (for example, the `AWSUtility::CloudFormation::CommandRunner` resource type) [#76](https://github.com/aws-solutions/aws-control-tower-customizations/issues/76)
+- CFCT now ignores non-existent OU targets when deploying SCPs, aligning with how non-existent OUs are treated when deploying StackSets [#126](https://github.com/aws-solutions/aws-control-tower-customizations/issues/126)
+
+## [2.6.0] - 2023-05-18
+- Now supported in the following regions: me-south-1, af-south-1, eu-south-1, ap-east-1, us-west-1.
+- Manifest now allows the use of S3 global urls to download template files and uses regional urls as a fallback mechanism.
+- Eventbased triggers for CodePipeline deployments now supported.
+
+## [2.5.3] - 2023-04-25
+- Bugfix: Add S3 bucket policy necessary for new CfCT deployments
+
+## [2.5.2] - 2022-12-12
+- Fix bug where adding a resource to the middle of the manifest file caused CFCT to submit step function executions for all remaining manifest resources even if those resources had no changes
+- Drop polling wait time for step function execution status from 30s to 15s
+
+## [2.5.1] - 2022-10-19
+- Add support for AWS GovCloud
+- Please note: using CFCT in AWS GovCloud requires the Control Tower home region to be AWS GovCloud West (us-gov-west-1)
+
+## [2.5.0] - 2022-08-26
+- Support for opt-in deletion of Stack Set resources. This functionality is only supported when using the manifest v2 schema. Opting in to the new functionality reduces the overhead of manually deleting resources provisioned by CfCT.
+  - In the manifest v2 schema, the `enable_stack_set_deletion` flag is set to `false` by default. In this configuration, when a resource is removed from Customizations for Control Tower's manifest, no actions will be taken against the StackSet removed.
+  - Once opting into `enable_stack_set_deletion` by setting its value to `true` in the manifest, Removing a resource in its entirety from the manifest will delete the StackSet and all owned resources.
+  - https://docs.aws.amazon.com/controltower/latest/userguide/cfct-delete-stack.html
+>**Note:** With `enable_stack_set_deletion` set to `true`, on the next invocation of CfCT, **ALL** resources not declared in the manifest, that start with the prefix `CustomControlTower-` and have the associated Tag: `"Key": "AWS_Solutions", "Value": "CustomControlTowerStackSet"` will be deleted
+- Bug Fix: Resolves a bug with CFCT versions >= 2.0.0 where using a v1 manifest format and defining a resource block without a parameter_file attribute (which is optional in v1 manifests) causes the CFCT pipeline to fail.
+
 ## [2.4.0] - 2022-06-08
 - Add support for CfCT pipeline to fail if any stack instances within a stack set deployment have failed
   - New template parameter `EnforceSuccessfulStackInstances` can be set to True to achieve this behaviour

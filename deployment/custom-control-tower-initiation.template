@@ -80,6 +80,11 @@ Parameters:
     - true
     - false
 
+  NoncurrentVersionExpirationDays:
+    Type: Number
+    Default: 90
+    Description: Number of days after which non-current versions will be deleted
+
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -189,6 +194,11 @@ Resources:
               SSEAlgorithm: AES256
       VersioningConfiguration:
         Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteNonCurrentVersions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: !Ref NoncurrentVersionExpirationDays
       LoggingConfiguration:
         DestinationBucketName: !Ref CustomControlTowerS3AccessLogsBucket
       PublicAccessBlockConfiguration:
@@ -216,6 +226,11 @@ Resources:
     Properties:
       VersioningConfiguration:
         Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteNonCurrentVersions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: !Ref NoncurrentVersionExpirationDays
       LoggingConfiguration:
         DestinationBucketName: !Ref CustomControlTowerS3AccessLogsBucket
       BucketEncryption:
@@ -249,10 +264,15 @@ Resources:
       cfn_nag:
         rules_to_suppress:
           - id: W35
-            reason: "This S3 bucket is used as the destination for 'CustomControlTowerPipelineS3Bucket' and 'CustomControlTowerPipelineArtifactS3Bucket'"
+            reason: "This S3 bucket is used as the destination for 'CustomControlTowerPipelineS3Bucket', 'CustomControlTowerPipelineArtifactS3Bucket' and 'CustomControlTowerCloudTrailDataEventBucket'"
     Properties:
       VersioningConfiguration:
         Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteNonCurrentVersions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: !Ref NoncurrentVersionExpirationDays
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -298,6 +318,21 @@ Resources:
                 "aws:SourceArn": !Sub "arn:${AWS::Partition}:s3:::${CustomControlTowerPipelineArtifactS3Bucket}"
               StringEquals:
                 "aws:SourceAccount": !Ref AWS::AccountId
+          - !If
+            - IsS3PipelineSource
+            - Sid: EnableS3AccessLoggingForCustomControlTowerCloudTrailDataEventBucket
+              Effect: Allow
+              Principal:
+                Service: logging.s3.amazonaws.com
+              Action:
+                - s3:PutObject
+              Resource: !Sub "arn:${AWS::Partition}:s3:::${CustomControlTowerS3AccessLogsBucket}/*"
+              Condition:
+                ArnLike:
+                  "aws:SourceArn": !Sub "arn:${AWS::Partition}:s3:::${CustomControlTowerCloudTrailDataEventBucket}"
+                StringEquals:
+                  "aws:SourceAccount": !Ref AWS::AccountId
+            - !Ref AWS::NoValue
 
   CustomControlTowerCodeCommit:
     Type: AWS::CodeCommit::Repository
@@ -2998,6 +3033,16 @@ Resources:
     Type: AWS::S3::Bucket
     Condition: IsS3PipelineSource
     DeletionPolicy: Retain
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteNonCurrentVersions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: !Ref NoncurrentVersionExpirationDays
+      LoggingConfiguration:
+        DestinationBucketName: !Ref CustomControlTowerS3AccessLogsBucket
 
   CustomControlTowerCloudTrailDataEventBucketPolicy:
     Type: AWS::S3::BucketPolicy
