@@ -28,3 +28,4 @@ build
 /deployment/state_machines/sample_events/
 /deployment/global-s3-assets/
 /deployment/regional-s3-assets/
+*.swp

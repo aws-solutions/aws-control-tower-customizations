@@ -32,6 +32,7 @@ Parameters:
     AllowedValues:
       - 'Amazon S3'
       - 'AWS CodeCommit'
+      - 'GitHub'
     Default: 'Amazon S3'
     Type: String
 
@@ -53,6 +54,28 @@ Parameters:
     AllowedValues:
       - 'Yes'
       - 'No'
+
+  CodeStarConnection:
+    Description:  Resource ARN for the CodeStar Connection to use
+    Type: String
+    AllowedPattern: '[A-Za-z0-9:/-]+'
+
+
+  GitHubOwnerName:
+    Description: The user/organization that owns the GitHub repository
+    Default: git-username
+    Type: String
+
+  GitHubRepositoryName:
+    Description: The name of the GitHub repository that contains custom Control Tower configuration. The suffix .git is prohibited.
+    Default: custom-control-tower-configuration
+    Type: String
+    AllowedPattern: ^[\w\.-]+
+
+  GitHubBranchName:
+    Description: Name of the branch in GitHub repository that contains custom Control Tower configuration.
+    Default: main
+    Type: String
 
   RegionConcurrencyType:
     Description: Select the the concurrency type of deploying StackSets operations in Regions.
@@ -101,6 +124,13 @@ Metadata:
       - CodeCommitRepositoryName
       - CodeCommitBranchName
     - Label:
+        default: GitHub Setup (Applicable if 'GitHub' was selected as the CodePipeline Source)
+      Parameters:
+        - CodeStarConnection
+        - GitHubOwnerName
+        - GitHubRepositoryName
+        - GitHubBranchName
+    - Label:
         default: AWS CloudFormation StackSets Configuration
       Parameters:
         - RegionConcurrencyType
@@ -126,6 +156,14 @@ Metadata:
         default: Max Concurrent Percentage
       FailureTolerancePercentage:
         default: Failure Tolerance Percentage
+      CodeStarConnection:
+        default: The ARN of the CodeStar Connection
+      GitHubOwnerName:
+        default: The GitHub user or organization that owns the repository
+      GitHubRepositoryName:
+        default: The GitHub repository for the customizations
+      GitHubBranchName:
+        default: The branch name for the GitHub repository
 
 Mappings:
   BucketConfiguration:
@@ -167,6 +205,7 @@ Conditions:
   IsPipelineApprovalStageCondition: !Equals [!Ref PipelineApprovalStage, 'Yes']
   IsBuildCustomControlTowerCondition: !Equals [!FindInMap [AutoBuild, CustomControlTower, Flag], 'Yes']
   IsCodeCommitPipelineSource: !Equals [!Ref CodePipelineSource, 'AWS CodeCommit']
+  IsGitHubPipelineSource: !Equals [!Ref CodePipelineSource, 'GitHub']
   IsS3PipelineSource: !Equals [!Ref CodePipelineSource, "Amazon S3"]
   IsExistingRepository: !Equals [!Ref ExistingRepository, 'Yes']
   IsNewCodeCommitRepository: !And [!Not [!Condition IsExistingRepository], !Condition IsCodeCommitPipelineSource]
@@ -450,6 +489,17 @@ Resources:
                     - "sns:Publish"
                   Resource: !Ref PipelineApprovalTopic
                 - !Ref AWS::NoValue
+              - !If
+                - IsGitHubPipelineSource
+                - Effect: "Allow"
+                  Action: 
+                    - 'codestar-connections:UseConnection'
+                    - 'codestar-connections:GetConnection'
+                    - 'codestar-connections:ListConnections'
+                    - 'codestar-connections:ListTagsForResource'
+                  Resource: !Ref CodeStarConnection
+                - !Ref AWS::NoValue
+
 
   CustomControlTowerCodePipeline:
     Type: AWS::CodePipeline::Pipeline
@@ -464,24 +514,24 @@ Resources:
           Actions:
             - Name: Source
               ActionTypeId:
-                !If
-                  - IsCodeCommitPipelineSource
-                  - Category: Source
-                    Owner: AWS
-                    Version: "1"
-                    Provider: CodeCommit
-                  - Category: Source
-                    Owner: AWS
-                    Version: "1"
-                    Provider: S3
+                Category: Source
+                Owner: AWS
+                Version: 1
+                Provider: !If [ IsCodeCommitPipelineSource, CodeCommit, !If [ IsGitHubPipelineSource, CodeStarSourceConnection, S3]]
               OutputArtifacts:
                 - Name: SourceApp
               Configuration:
                 !If
-                  - IsCodeCommitPipelineSource
-                  - RepositoryName: !Ref CodeCommitRepositoryName
-                    BranchName: !Ref CodeCommitBranchName
-                    PollForSourceChanges: false
+                - IsCodeCommitPipelineSource
+                - RepositoryName: !Ref CodeCommitRepositoryName
+                  BranchName: !Ref CodeCommitBranchName
+                  PollForSourceChanges: false
+                - !If
+                  - IsGitHubPipelineSource
+                  - ConnectionArn: !Ref CodeStarConnection
+                    FullRepositoryId: !Sub "${GitHubOwnerName}/${GitHubRepositoryName}"
+                    BranchName: !Ref GitHubBranchName
+                    DetectChanges: true
                   - S3Bucket: !Ref CustomControlTowerPipelineS3Bucket
                     S3ObjectKey: !FindInMap [BucketConfiguration, CustomControlTowerPipelineS3TriggerKey, Name]
                     PollForSourceChanges: false
