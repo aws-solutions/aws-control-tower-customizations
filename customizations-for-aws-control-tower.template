@@ -32,7 +32,7 @@ Parameters:
     AllowedValues:
       - 'Amazon S3'
       - 'AWS CodeCommit'
-      - 'GitHub'
+      - 'GitHub (via Code Connection)'
     Default: 'Amazon S3'
     Type: String
 
@@ -55,22 +55,22 @@ Parameters:
       - 'Yes'
       - 'No'
 
-  CodeStarConnection:
-    Description:  Resource ARN for the CodeStar Connection to use
+  CodeConnection:
+    Description:  Resource ARN for the Code Connection to use
     Type: String
-    AllowedPattern: '[A-Za-z0-9:/-]+'
-
+    AllowedPattern: '(?!.*\s)|(arn:aws(-[\w]+)*:.+:.+:[0-9]{12}:.+)'
 
   GitHubOwnerName:
     Description: The user/organization that owns the GitHub repository
     Default: git-username
     Type: String
+    AllowedPattern: '(?!.*\s)|(^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$)'
 
   GitHubRepositoryName:
     Description: The name of the GitHub repository that contains custom Control Tower configuration. The suffix .git is prohibited.
     Default: custom-control-tower-configuration
     Type: String
-    AllowedPattern: ^[\w\.-]+
+    AllowedPattern: '^[\w\.-]+'
 
   GitHubBranchName:
     Description: Name of the branch in GitHub repository that contains custom Control Tower configuration.
@@ -124,9 +124,9 @@ Metadata:
       - CodeCommitRepositoryName
       - CodeCommitBranchName
     - Label:
-        default: GitHub Setup (Applicable if 'GitHub' was selected as the CodePipeline Source)
+        default: GitHub Setup (Applicable if 'GitHub (via Code Connection)' was selected as the CodePipeline Source)
       Parameters:
-        - CodeStarConnection
+        - CodeConnection
         - GitHubOwnerName
         - GitHubRepositoryName
         - GitHubBranchName
@@ -156,8 +156,8 @@ Metadata:
         default: Max Concurrent Percentage
       FailureTolerancePercentage:
         default: Failure Tolerance Percentage
-      CodeStarConnection:
-        default: The ARN of the CodeStar Connection
+      CodeConnection:
+        default: The ARN of the Code Connection
       GitHubOwnerName:
         default: The GitHub user or organization that owns the repository
       GitHubRepositoryName:
@@ -205,10 +205,37 @@ Conditions:
   IsPipelineApprovalStageCondition: !Equals [!Ref PipelineApprovalStage, 'Yes']
   IsBuildCustomControlTowerCondition: !Equals [!FindInMap [AutoBuild, CustomControlTower, Flag], 'Yes']
   IsCodeCommitPipelineSource: !Equals [!Ref CodePipelineSource, 'AWS CodeCommit']
-  IsGitHubPipelineSource: !Equals [!Ref CodePipelineSource, 'GitHub']
+  IsGitHubPipelineSource: !Equals [!Ref CodePipelineSource, 'GitHub (via Code Connection)']
   IsS3PipelineSource: !Equals [!Ref CodePipelineSource, "Amazon S3"]
   IsExistingRepository: !Equals [!Ref ExistingRepository, 'Yes']
   IsNewCodeCommitRepository: !And [!Not [!Condition IsExistingRepository], !Condition IsCodeCommitPipelineSource]
+
+Rules:
+  GitHubPipelineSource:
+    RuleCondition:  !Equals
+      - !Ref CodePipelineSource
+      - 'GitHub (via Code Connection)'
+    Assertions:
+      - Assert: !Not
+          - !Equals
+              - !Ref CodeConnection
+              - ""
+        AsertDescription: "The ARN of a Code Connection is required for a deployment using GitHub as its source"
+      - Assert: !Not
+          - !Equals
+              - !Ref GitHubOwnerName
+              - ""
+        AsertDescription: "The Owner (User or Organization) for the GitHub repoitory is required for a deployment using GitHub as its source"
+      - Assert: !Not
+          - !Equals
+              - !Ref GitHubRepositoryName
+              - ""
+        AsertDescription: "The repository name for the GitHub repository is required for a deployment using GitHub as its source"
+      - Assert: !Not
+          - !Equals
+              - !Ref GitHubBranchName
+              - ""
+        AsertDescription: "The branch name for the GitHub repository is required for a deployment using GitHub as its source"
 
 Resources:
 
@@ -497,7 +524,7 @@ Resources:
                     - 'codestar-connections:GetConnection'
                     - 'codestar-connections:ListConnections'
                     - 'codestar-connections:ListTagsForResource'
-                  Resource: !Ref CodeStarConnection
+                  Resource: !Ref CodeConnection
                 - !Ref AWS::NoValue
 
 
@@ -528,7 +555,7 @@ Resources:
                   PollForSourceChanges: false
                 - !If
                   - IsGitHubPipelineSource
-                  - ConnectionArn: !Ref CodeStarConnection
+                  - ConnectionArn: !Ref CodeConnection
                     FullRepositoryId: !Sub "${GitHubOwnerName}/${GitHubRepositoryName}"
                     BranchName: !Ref GitHubBranchName
                     DetectChanges: true
