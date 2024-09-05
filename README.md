@@ -4,7 +4,11 @@ The Customizations for AWS Control Tower solution combines AWS Control Tower and
 ## Getting Started 
 To get started with Customizations for AWS Control Tower, please review the [documentation](https://docs.aws.amazon.com/controltower/latest/userguide/customize-landing-zone.html)
 
-## Running unit tests for customization 
+The solution can be deployed using one of three sources, S3, CodeCommit and GitHub.
+
+## Deploying with S3 as the Source
+
+### Running unit tests for customization 
 * Clone the repository, then make the desired code changes 
 * Next, run unit tests to make sure added customization passes the tests 
 
@@ -13,7 +17,7 @@ chmod +x ./deployment/run-unit-tests.sh
 ./deployment/run-unit-tests.sh
 ``` 
 
-## Building the customized solution
+### Building the customized solution
 * Building the solution from source requires Python 3.6 or higher
 * Configure the solution name, version number, bucket name and (optional) opt-in region support of your target Amazon S3 distribution bucket 
 
@@ -49,11 +53,36 @@ chmod +x ./deployment/build-s3-dist.sh
     s3://my-bucket-name-$REGION/$SOLUTION_NAME/$VERSION/
     ``` 
 
-## Deploying the customized solution
+### Deploying the customized solution
 * Get the link of the custom-control-tower-initiation.template loaded to your Amazon S3 bucket. 
 * Deploy the Customizations for AWS Control Tower solution to your account by launching a new AWS CloudFormation stack using the link of the custom-control-tower-initiation.template.
 
+## Deploying with GitHub as the Source
 
+### Prepare a GitHub Repository
+Create a repository within your GitHub account, and populate with the contents of this repository. 
+**Consider making the target repository private**. 
+You can use the [Import your project to GitHub](https://github.com/new/import) to make this process easier.
+
+### Running unit tests for customization 
+* Clone your GitHub repository, You might use a tool such as [GitHub Desktop](https://desktop.github.com/download/), if you wish.
+* then make the desired code changes
+* Next, run unit tests to make sure added customization passes the tests
+
+```  
+chmod +x ./deployment/run-unit-tests.sh
+./deployment/run-unit-tests.sh
+```
+Once you have a build ready, commit it to the repository and push it to GitHub.
+
+### Deploying the customized solution
+* Create a Code Connection instance for GitHub, and deploy the app into your GitHub account. Make a note of the Code Connections ARN, as you'll need to provide this when deploying the AWS CloudFormation stack.
+* Get the link of the custom-control-tower-initiation.template in the root of your repository.
+* Deploy the Customizations for AWS Control Tower solution to your account by launching a new AWS CloudFormation stack using the link of the custom-control-tower-initiation.template.
+ * Under **AWS CodePipeline Source** Select `GitHub (via Code Connection)`
+ * Scroll down to the **GitHub Setup (Applicable if 'GitHub (via Code Connection)' was selected as the CodePipeline Source)** section and provide all the parameters in this section.
+
+ 
 ## Collection of operational metrics
 
 This solution collects anonymous operational metrics to help AWS improve the quality and features of the solution. For more information, including how to disable this capability, please see the [documentation here](https://docs.aws.amazon.com/controltower/latest/userguide/cfct-metrics.html).
