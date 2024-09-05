@@ -76,11 +76,28 @@ chmod +x ./deployment/run-unit-tests.sh
 Once you have a build ready, commit it to the repository and push it to GitHub.
 
 ### Deploying the customized solution
-* Create a Code Connection instance for GitHub, and deploy the app into your GitHub account. Make a note of the Code Connections ARN, as you'll need to provide this when deploying the AWS CloudFormation stack.
+* [Developer Tools - Connections](https://console.aws.amazon.com/codesuite/settings/connections) instance for GitHub
+* Select **Create connection**
+  * Select `GitHub` as the **provider**
+  * **Create GitHub App connection** in **Connection name** type `GitHub - CfCT`
+  * Select **Connect to GitHub**
+* Connect to GitHub
+  * Select **Install a new app**
+  * Select the GitHub User/Organization for your repository
+* AWS Connector for GitHub
+  * Under **Repository access**, select **Only select repositories** and select only the repository you created earlier.
+  * Select **Save**
+* Make a note of the Code Connections ARN, as you'll need to provide this when deploying the AWS CloudFormation stack.
+
 * Get the link of the custom-control-tower-initiation.template in the root of your repository.
 * Deploy the Customizations for AWS Control Tower solution to your account by launching a new AWS CloudFormation stack using the link of the custom-control-tower-initiation.template.
- * Under **AWS CodePipeline Source** Select `GitHub (via Code Connection)`
- * Scroll down to the **GitHub Setup (Applicable if 'GitHub (via Code Connection)' was selected as the CodePipeline Source)** section and provide all the parameters in this section.
+ * Under **AWS CodePipeline Source** 
+   * Select `GitHub (via Code Connection)`
+ * Under **GitHub Setup (Applicable if 'GitHub (via Code Connection)' was selected as the CodePipeline Source)**
+   * **The ARN of the Code Connection** provide the `Code Connection ARN`
+   * **The GitHub user or organization that owns the repository** type the GitHub user/organization under which you created the repository
+   * **The GitHub repository for the customizations** the repository name (defaults to `custom-control-tower-configuration`)
+   * **The branch name for the GitHub repository** the branch name (defaults to `main`)
 
  
 ## Collection of operational metrics
