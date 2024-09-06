@@ -78,7 +78,7 @@ You'll define you customizations in a yaml file called `manifest.yaml` in the ro
 
 The [CfCT customization guide](https://docs.aws.amazon.com/controltower/latest/userguide/cfct-customizations-dev-guide.html) provides detailed guidance on creating a `manifest.yaml` to configure your customizations.
 
-### Deploying the solution
+### Creating the Code Connection
 * [Developer Tools - Connections](https://console.aws.amazon.com/codesuite/settings/connections) instance for GitHub
 * Select **Create connection**
   * Select `GitHub` as the **provider**
@@ -90,8 +90,9 @@ The [CfCT customization guide](https://docs.aws.amazon.com/controltower/latest/u
 * AWS Connector for GitHub
   * Under **Repository access**, select **Only select repositories** and select only the repository you created earlier.
   * Select **Save**
-* Make a note of the Code Connections ARN, as you'll need to provide this when deploying the AWS CloudFormation stack.
+* Note the Code Connections ARN - you'll need it when deploying the CloudFormation stack.
 
+### Deploying the CloudFormation Stack
 * Download the `custom-control-tower-initiation.template` from the root of this repository.
 * Create a new AWS CloudFormation stack, using the `custom-control-tower-initiation.template` above.
  * Under **AWS CodePipeline Source** 
