@@ -157,13 +157,13 @@ Metadata:
       FailureTolerancePercentage:
         default: Failure Tolerance Percentage
       CodeConnection:
-        default: The ARN of the Code Connection
+        default: ARN of the Code Connection
       GitHubOwnerName:
-        default: The GitHub user or organization that owns the repository
+        default: GitHub User or Organization
       GitHubRepositoryName:
-        default: The GitHub repository for the customizations
+        default: GitHub Repository Name
       GitHubBranchName:
-        default: The branch name for the GitHub repository
+        default: GitHub Branch Name
 
 Mappings:
   BucketConfiguration:

@@ -57,25 +57,28 @@ chmod +x ./deployment/build-s3-dist.sh
 * Get the link of the custom-control-tower-initiation.template loaded to your Amazon S3 bucket. 
 * Deploy the Customizations for AWS Control Tower solution to your account by launching a new AWS CloudFormation stack using the link of the custom-control-tower-initiation.template.
 
+## Deploying with CodeCommit as the Source
+
+### Deploying the solution
+* Download the `custom-control-tower-initiation.template` from the root of this repository.
+* Create a new AWS CloudFormation stack, using the `custom-control-tower-initiation.template` above.
+ * Under **AWS CodePipeline Source**
+   * Select `GAWS CodeCommit`
+ * Under **AWS CodeCommit Setup (Applicable if 'AWS CodeCommit' was selected as the CodePipeline Source)**
+   * **Existing CodeCommit Repository?** if you already have a repository in AWS CodeCommit, prepared for deploying CfCT, then select `Yes`  and provide the following to parameters. Otherwise select `No` and one will be created for you.
+   * **CodeCommit Repository Name** the repository name (defaults to `custom-control-tower-configuration`)
+   * **CodeCommit Branch Name** the branch name (defaults to `main`)
+
 ## Deploying with GitHub as the Source
 
 ### Prepare a GitHub Repository
-Create a repository within your GitHub account, and populate with the contents of this repository. 
+Create a repository within your GitHub account, the default name used in the template `custom-control-tower-configuration`.
 **Consider making the target repository private**. 
-You can use the [Import your project to GitHub](https://github.com/new/import) to make this process easier.
+You'll define you customizations in a yaml file called `manifest.yaml` in the root of this repo. 
 
-### Running unit tests for customization 
-* Clone your GitHub repository, You might use a tool such as [GitHub Desktop](https://desktop.github.com/download/), if you wish.
-* then make the desired code changes
-* Next, run unit tests to make sure added customization passes the tests
+The [CfCT customization guide](https://docs.aws.amazon.com/controltower/latest/userguide/cfct-customizations-dev-guide.html) provides detailed guidance on creating a `manifest.yaml` to configure your customizations.
 
-```  
-chmod +x ./deployment/run-unit-tests.sh
-./deployment/run-unit-tests.sh
-```
-Once you have a build ready, commit it to the repository and push it to GitHub.
-
-### Deploying the customized solution
+### Deploying the solution
 * [Developer Tools - Connections](https://console.aws.amazon.com/codesuite/settings/connections) instance for GitHub
 * Select **Create connection**
   * Select `GitHub` as the **provider**
@@ -89,16 +92,15 @@ Once you have a build ready, commit it to the repository and push it to GitHub.
   * Select **Save**
 * Make a note of the Code Connections ARN, as you'll need to provide this when deploying the AWS CloudFormation stack.
 
-* Get the link of the custom-control-tower-initiation.template in the root of your repository.
-* Deploy the Customizations for AWS Control Tower solution to your account by launching a new AWS CloudFormation stack using the link of the custom-control-tower-initiation.template.
+* Download the `custom-control-tower-initiation.template` from the root of this repository.
+* Create a new AWS CloudFormation stack, using the `custom-control-tower-initiation.template` above.
  * Under **AWS CodePipeline Source** 
    * Select `GitHub (via Code Connection)`
  * Under **GitHub Setup (Applicable if 'GitHub (via Code Connection)' was selected as the CodePipeline Source)**
-   * **The ARN of the Code Connection** provide the `Code Connection ARN`
-   * **The GitHub user or organization that owns the repository** type the GitHub user/organization under which you created the repository
-   * **The GitHub repository for the customizations** the repository name (defaults to `custom-control-tower-configuration`)
-   * **The branch name for the GitHub repository** the branch name (defaults to `main`)
-
+   * **ARN of the Code Connection** provide the `Code Connection ARN`
+   * **GitHub User or Organization** type the GitHub user/organization under which you created the repository
+   * **GitHub Repository Name** the repository name (defaults to `custom-control-tower-configuration`)
+   * **GitHub Branch Name** the branch name (defaults to `main`)
  
 ## Collection of operational metrics
 
