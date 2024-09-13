@@ -28,10 +28,10 @@ setuptools.setup(
     python_requires=">=3.11",
     install_requires=[
         "yorm==1.6.2",
-        "PyYAML==5.3.1",
-        "Jinja2==2.11.3",
+        "pyyaml>=5.4.1",
+        "Jinja2==3.1.4",
         "MarkupSafe==2.0.1",  # https://github.com/pallets/jinja/issues/1585
-        "requests==2.25.1",
+        "requests==2.32.2",
         "markdown_to_json==1.0.0",
         "python-dateutil==2.8.1",
         "boto3==1.28.17",
@@ -59,5 +59,5 @@ setuptools.setup(
             "setuptools",
             "virtualenv",
         ],
-    },
+    }
 )

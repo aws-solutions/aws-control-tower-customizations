@@ -49,6 +49,14 @@ def install_dependencies(
         ["pip", "install", "--quiet", lib_path, "--target", dist_folder], check=True
     )
 
+    # Capture all installed package versions into requirements.txt
+    requirements_path = os.path.join(dist_folder, "requirements.txt")
+    subprocess.run(
+        ["pip", "freeze", "--path", dist_folder],
+        check=True,
+        stdout=open(requirements_path, "w")
+    )
+
     # Include lambda handlers in distributables
     for file in glob.glob(f"{handlers_path}/*.py"):
         shutil.copy(src=file, dst=dist_folder)

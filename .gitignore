@@ -18,6 +18,7 @@ __pycache__
 venv
 .venv
 testing-venv
+myenv
 
 # Ignore installed dependencies
 dist

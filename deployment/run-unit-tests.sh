@@ -16,7 +16,12 @@ echo "Python version: `python3 --version`"
 echo "Installing pip"
 pip3 install --quiet -U pip
 echo "Installing CFCT library"
-pip3 install --quiet "./source/src[test, dev]"
+# Upgrade setuptools, wheel
+# Install cython<3.0.0 and pyyaml 5.4.1 with build isolation
+# Ref: https://github.com/yaml/pyyaml/issues/724
+pip3 install --upgrade setuptools wheel
+pip3 install 'cython<3.0.0' && pip3 install --no-build-isolation pyyaml==5.4.1
+pip3 install "./source/src[test, dev]"
 echo "Running tests..."
 python3 -m pytest -m unit
 

@@ -61,6 +61,12 @@ fi
  echo "mkdir -p $build_dist_dir"
  mkdir -p "$build_dist_dir"
 
+# Upgrade setuptools, wheel
+# Install cython<3.0.0 and pyyaml 5.4.1 with build isolation
+# Ref: https://github.com/yaml/pyyaml/issues/724
+pip3 install --upgrade setuptools wheel
+pip3 install 'cython<3.0.0' && pip3 install --no-build-isolation pyyaml==5.4.1
+
 # Create zip file for AWS Lambda functions
 echo -e "\n Creating all lambda functions for Custom Control Tower Solution"
 python3 deployment/lambda_build.py state_machine_lambda deployment_lambda build_scripts lifecycle_event_handler state_machine_trigger

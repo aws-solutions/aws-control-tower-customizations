@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.3] - 2024-09-13
+- Update dependencies
+  - `PyYAML` 5.4.1 ([#154](https://github.com/aws-solutions/aws-control-tower-customizations/issues/154), [#169](https://github.com/aws-solutions/aws-control-tower-customizations/issues/169))
+  - `Jinja2` 3.1.4 ([#169](https://github.com/aws-solutions/aws-control-tower-customizations/issues/169))
+  - `requests` 2.32.2
+
+## [2.7.2] - 2024-07-18
+- Add support for AWS Regions: Asia Pacific (Hyderabad, Jakarta, and Osaka), Israel (Tel Aviv), Middle East (UAE), 
+  and AWS GovCloud (US-East). Customers with these Regions as their AWS Control Tower home Region can now deploy 
+  account customizations using the CfCT framework.
+- Enable lifecycle configuration, enable access logging and add versioning on S3 buckets 
+- Enhance security and robustness through improved handling of file paths and highly compressed data 
+- Upgrade botocore to version 1.31.17 and boto3 to version 1.28.17
+
 ## [2.7.1] - 2024-05-30
 * Update dependencies & runtimes ([#186]((https://github.com/aws-solutions/aws-control-tower-customizations/issues/186)), [#193]((https://github.com/aws-solutions/aws-control-tower-customizations/issues/193)))
   * Building the solution from source now requires Python 3.11 or higher
