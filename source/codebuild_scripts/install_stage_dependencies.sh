@@ -4,13 +4,14 @@
 if [ -z "$1" ]; then
     echo "Please provide the base source bucket name, trademark approved solution name and version where the lambda code will eventually reside."
     echo "For example: ./install_stage_dependencies.sh <STAGE_NAME>"
-    echo "For example: ./install_stage_dependencies.sh build | scp | stackset"
+    echo "For example: ./install_stage_dependencies.sh build | scp | rcp | stackset"
     exit 1
 fi
 
 stage_name_argument=$1
 build_stage_name='build'
 scp_stage_name='scp'
+rcp_stage_name='rcp'
 stackset_stage_name='stackset'
 
 install_common_pip_packages () {
@@ -46,6 +47,11 @@ scp_dependencies () {
     install_common_pip_packages
 }
 
+rcp_dependencies () {
+    # install pip packages
+    install_common_pip_packages
+}
+
 stackset_dependencies () {
     # install pip packages
     install_common_pip_packages
@@ -59,6 +65,10 @@ elif [ $stage_name_argument == $scp_stage_name ];
 then
     echo "Installing SCP Stage Dependencies."
     scp_dependencies
+elif [ $stage_name_argument == $rcp_stage_name ];
+then
+    echo "Installing RCP Stage Dependencies."
+    rcp_dependencies    
 elif [ $stage_name_argument == $stackset_stage_name ];
 then
     echo "Installing StackSet Stage Dependencies."

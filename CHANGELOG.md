@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.1] - 2024-12-09
+- Add support for Resource Control Policies (RCPs). RCPs help you ensure that resources in your accounts stay within 
+  your organization’s access control guidelines. Learn more [here](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_rcps.html).
+  - To set up a configuration package for Resource Control Polices, see
+    [CfCT customization guide](https://docs.aws.amazon.com/controltower/latest/userguide/cfct-customizations-dev-guide.html).
+- Add support for GitHub as a version control system (VCS) alternative for CfCT. ([#21](https://github.com/aws-solutions/aws-control-tower-customizations/issues/21))
+  - Learn more on how to set up CfCT using GitHub in the [Set up GitHub as the configuration source](https://docs.aws.amazon.com/controltower/latest/userguide/cfct-github-configuration-source.html) 
+    section of the user guide.
+- Add guidance on CodeCommit availability to new customers.
+
 ## [2.7.3] - 2024-09-13
 - Update dependencies
   - `PyYAML` 5.4.1 ([#154](https://github.com/aws-solutions/aws-control-tower-customizations/issues/154), [#169](https://github.com/aws-solutions/aws-control-tower-customizations/issues/169))
@@ -19,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgrade botocore to version 1.31.17 and boto3 to version 1.28.17
 
 ## [2.7.1] - 2024-05-30
-* Update dependencies & runtimes ([#186]((https://github.com/aws-solutions/aws-control-tower-customizations/issues/186)), [#193]((https://github.com/aws-solutions/aws-control-tower-customizations/issues/193)))
+* Update dependencies & runtimes ([#186](https://github.com/aws-solutions/aws-control-tower-customizations/issues/186), [#193](https://github.com/aws-solutions/aws-control-tower-customizations/issues/193))
   * Building the solution from source now requires Python 3.11 or higher
   * Update Python Lambda runtimes to 3.11
   * Update Ruby version to 3.3

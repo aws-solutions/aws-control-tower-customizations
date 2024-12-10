@@ -143,6 +143,8 @@ class SMExecutionManager:
     def get_sm_exec_name(sm_input):
         if os.environ.get("STAGE_NAME").upper() == "SCP":
             return sm_input.get("ResourceProperties").get("PolicyDocument").get("Name")
+        elif os.environ.get("STAGE_NAME").upper() == "RCP":
+            return sm_input.get("ResourceProperties").get("PolicyDocument").get("Name")
         elif os.environ.get("STAGE_NAME").upper() == "STACKSET":
             return sm_input.get("ResourceProperties").get("StackSetName")
         else:

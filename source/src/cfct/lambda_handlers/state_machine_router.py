@@ -18,7 +18,7 @@
 import inspect
 import os
 
-from cfct.state_machine_handler import CloudFormation, ServiceControlPolicy, StackSetSMRequests
+from cfct.state_machine_handler import CloudFormation, ServiceControlPolicy, StackSetSMRequests, ResourceControlPolicy
 from cfct.utils.logger import Logger
 
 # initialise logger
@@ -154,6 +154,102 @@ def service_control_policy(event, function_name):
     return response
 
 
+def resource_control_policy(event, function_name):
+    rcp = ResourceControlPolicy(event, logger)
+    logger.info("Router FunctionName: {}".format(function_name))
+    if function_name == "list_policies":
+        response = rcp.list_policies()
+    elif function_name == "list_policies_for_account":
+        response = rcp.list_policies_for_account()
+    elif function_name == "list_policies_for_ou":
+        response = rcp.list_policies_for_ou()
+    elif function_name == "create_policy":
+        response = rcp.create_policy()
+    elif function_name == "update_policy":
+        response = rcp.update_policy()
+    elif function_name == "delete_policy":
+        response = rcp.delete_policy()
+    elif function_name == "configure_count":
+        policy_list = event.get("ResourceProperties").get("PolicyList", [])
+        logger.info("List of policies: {}".format(policy_list))
+        event.update({"Index": 0})
+        event.update({"Step": 1})
+        event.update({"Count": len(policy_list)})
+        return event
+    elif function_name == "iterator":
+        index = event.get("Index")
+        step = event.get("Step")
+        count = event.get("Count")
+        policy_list = event.get("ResourceProperties").get("PolicyList", [])
+        policy_to_apply = policy_list[index] if len(policy_list) > index else None
+
+        if index < count:
+            _continue = True
+        else:
+            _continue = False
+
+        index = index + step
+
+        event.update({"Index": index})
+        event.update({"Step": step})
+        event.update({"Continue": _continue})
+        event.update({"PolicyName": policy_to_apply})
+        return event
+    elif function_name == "attach_policy":
+        response = rcp.attach_policy()
+    elif function_name == "detach_policy":
+        response = rcp.detach_policy()
+    elif function_name == "detach_policy_from_all_accounts":
+        response = rcp.detach_policy_from_all_accounts()
+    elif function_name == "enable_policy_type":
+        response = rcp.enable_policy_type()
+    elif function_name == "configure_count_2":
+        ou_list = event.get("ResourceProperties").get("OUList", [])
+        logger.info("List of OUs: {}".format(ou_list))
+        event.update({"Index": 0})
+        event.update({"Step": 1})
+        event.update({"Count": len(ou_list)})
+        return event
+    elif function_name == "iterator2":
+        index = event.get("Index")
+        step = event.get("Step")
+        count = event.get("Count")
+        ou_list = event.get("ResourceProperties").get("OUList", [])
+        ou_map = ou_list[index] if len(ou_list) > index else None
+
+        if index < count:
+            _continue = True
+        else:
+            _continue = False
+
+        index = index + step
+
+        event.update({"Index": index})
+        event.update({"Step": step})
+        event.update({"Continue": _continue})
+        if ou_map:  # ou list example: [['ouname1','ouid1],'Attach']
+            logger.info("[state_machine_router.resource_control_policy] ou_map:  {}".format(ou_map))
+            logger.debug(
+                "[state_machine_router.resource_control_policy] OUName: {}; OUId: {}; Operation: {}".format(
+                    ou_map[0][0], ou_map[0][1], ou_map[1]
+                )
+            )
+
+            event.update({"OUName": ou_map[0][0]})
+            event.update({"OUId": ou_map[0][1]})
+            event.update({"Operation": ou_map[1]})
+
+        return event
+
+    else:
+        message = build_messages(1)
+        logger.info(message)
+        return {"Message": message}
+
+    logger.info(response)
+    return response
+
+
 def stackset_sm_requests(event, function_name):
     sr = StackSetSMRequests(event, logger)
     logger.info("Router FunctionName: {}".format(function_name))
@@ -208,6 +304,8 @@ def lambda_handler(event, context):
                 return stackset_sm_requests(event, function_name)
             elif class_name == "SCP":
                 return service_control_policy(event, function_name)
+            elif class_name == "RCP":
+                return resource_control_policy(event, function_name)
             else:
                 message = build_messages(2)
                 logger.info(message)

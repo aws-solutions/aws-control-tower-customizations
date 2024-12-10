@@ -26,6 +26,7 @@ from cfct.manifest.manifest import Manifest
 from cfct.manifest.sm_input_builder import (
     InputBuilder,
     SCPResourceProperties,
+    RCPResourceProperties,
     StackSetResourceProperties,
 )
 from cfct.manifest.stage_to_s3 import StageFile
@@ -49,6 +50,17 @@ def scp_manifest():
     elif manifest.version == VERSION_2:
         get_scp_input = SCPParser()
         return get_scp_input.parse_scp_manifest_v2()
+
+
+def rcp_manifest():
+    # determine manifest version
+    manifest = Manifest(os.environ.get("MANIFEST_FILE_PATH"))
+    if manifest.version == VERSION_1:
+        get_rcp_input = RCPParser()
+        return get_rcp_input.parse_rcp_manifest_v1()
+    elif manifest.version == VERSION_2:
+        get_rcp_input = RCPParser()
+        return get_rcp_input.parse_rcp_manifest_v2()
 
 
 def stack_set_manifest():
@@ -137,6 +149,60 @@ class SCPParser:
                 final_ou_list = org_data.get_final_ou_list(attach_ou_list)
 
                 state_machine_inputs.append(build.scp_sm_input(final_ou_list, resource, policy_url))
+
+        # Exit if there are no organization policies
+        if len(state_machine_inputs) == 0:
+            self.logger.info("Organization policies not found" " in the manifest.")
+            sys.exit(0)
+        else:
+            return state_machine_inputs
+
+
+class RCPParser:
+    """
+    This class parses the Resource Control Policies resources from the manifest
+    file. It converts the yaml (manifest) into JSON input for the RCP state
+    machine.
+    :return List of JSON
+
+    Example:
+        get_rcp_input = RCPParser()
+        list_of_inputs = get_rcp_input.parse_rcp_manifest_v1|2()
+    """
+
+    def __init__(self):
+        self.logger = logger
+        self.manifest = Manifest(os.environ.get("MANIFEST_FILE_PATH"))
+
+    def parse_rcp_manifest_v1(self) -> list:
+        self.logger.info("Resource Control Policy not supported in V1")
+        sys.exit(0)
+
+    def parse_rcp_manifest_v2(self) -> list:
+        state_machine_inputs = []
+        self.logger.info(
+            "[manifest_parser.parse_rcp_manifest_v2] Processing RCPs from {} file".format(
+                os.environ.get("MANIFEST_FILE_PATH")
+            )
+        )
+        build = BuildStateMachineInput(self.manifest.region)
+        org_data = OrganizationsData()
+        for resource in self.manifest.resources:
+            if resource.deploy_method == "rcp":
+                local_file = StageFile(self.logger, resource.resource_file)
+                policy_url = local_file.get_staged_file()
+                attach_ou_list = set(resource.deployment_targets.organizational_units)
+
+                self.logger.debug(
+                    "[manifest_parser.parse_rcp_manifest_v2] attach_ou_list: {} ".format(
+                        attach_ou_list
+                    )
+                )
+
+                # Add ou id to final ou list
+                final_ou_list = org_data.get_final_ou_list(attach_ou_list)
+
+                state_machine_inputs.append(build.rcp_sm_input(final_ou_list, resource, policy_url))
 
         # Exit if there are no organization policies
         if len(state_machine_inputs) == 0:
@@ -295,7 +361,7 @@ class StackSetParser:
 
 class BuildStateMachineInput:
     """
-    This class build state machine inputs for SCP and Stack Set state machines
+    This class build state machine inputs for SCP, RCP and Stack Set state machines
 
     """
 
@@ -321,6 +387,25 @@ class BuildStateMachineInput:
         self.logger.debug("&&&&& [manifest_parser.scp_sm_input] scp_input &&&&&&")
         self.logger.debug(scp_input)
         self.logger.debug("&&&&& [manifest_parser.scp_sm_input] sm_input &&&&&&")
+        self.logger.debug(sm_input)
+
+        return sm_input
+
+    def rcp_sm_input(self, attach_ou_list, policy, policy_url) -> dict:
+        ou_list = []
+
+        for ou in attach_ou_list:
+            ou_list.append((ou, "Attach"))
+
+        resource_properties = RCPResourceProperties(
+            policy.name, policy.description, policy_url, ou_list
+        )
+        rcp_input = InputBuilder(resource_properties.get_rcp_input_map())
+        sm_input = rcp_input.input_map()
+
+        self.logger.debug("&&&&& [manifest_parser.rcp_sm_input] rcp_input &&&&&&")
+        self.logger.debug(rcp_input)
+        self.logger.debug("&&&&& [manifest_parser.rcp_sm_input] sm_input &&&&&&")
         self.logger.debug(sm_input)
 
         return sm_input

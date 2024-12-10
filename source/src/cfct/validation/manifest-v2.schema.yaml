@@ -56,7 +56,7 @@ mapping:
         "deploy_method":
           type: str
           required: True
-          enum: ['scp', 'stack_set']
+          enum: ['scp', 'stack_set', 'rcp']
         "regions":
           type: seq
           sequence:

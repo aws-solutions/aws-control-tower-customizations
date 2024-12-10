@@ -1,10 +1,10 @@
 ## Customizations for AWS Control Tower Solution
-The Customizations for AWS Control Tower solution combines AWS Control Tower and other highly-available, trusted AWS services to help customers more quickly set up a secure, multi-account AWS environment based on AWS best practices. Customers can easily add customizations to their AWS Control Tower landing zone using an AWS CloudFormation template and service control policies (SCPs). Customers can deploy their custom template and policies to both individual accounts and organizational units (OUs) within their organization. Customizations for AWS Control Tower integrates with AWS Control Tower lifecycle events to ensure that resource deployments stay in sync with the customer's landing zone. For example, when a new account is created using the AWS Control Tower account factory, the solution ensures that all resources attached to the account's OUs will be automatically deployed. Before deploying this solution, customers need to have an AWS Control Tower landing zone deployed in their account.
+The Customizations for AWS Control Tower solution combines AWS Control Tower and other highly-available, trusted AWS services to help customers more quickly set up a secure, multi-account AWS environment based on AWS best practices. Customers can easily add customizations to their AWS Control Tower landing zone using an AWS CloudFormation template, service control policies (SCPs), and resource control policies (RCPs). Customers can deploy their custom template and policies to both individual accounts and organizational units (OUs) within their organization. Customizations for AWS Control Tower integrates with AWS Control Tower lifecycle events to ensure that resource deployments stay in sync with the customer's landing zone. For example, when a new account is created using the AWS Control Tower account factory, the solution ensures that all resources attached to the account's OUs will be automatically deployed. Before deploying this solution, customers need to have an AWS Control Tower landing zone deployed in their account.
 
 ## Getting Started 
 To get started with Customizations for AWS Control Tower, please review the [documentation](https://docs.aws.amazon.com/controltower/latest/userguide/customize-landing-zone.html)
 
-## Running unit tests for customization 
+## Running unit tests for customization
 * Clone the repository, then make the desired code changes 
 * Next, run unit tests to make sure added customization passes the tests 
 
@@ -52,7 +52,6 @@ chmod +x ./deployment/build-s3-dist.sh
 ## Deploying the customized solution
 * Get the link of the custom-control-tower-initiation.template loaded to your Amazon S3 bucket. 
 * Deploy the Customizations for AWS Control Tower solution to your account by launching a new AWS CloudFormation stack using the link of the custom-control-tower-initiation.template.
-
 
 ## Collection of operational metrics
 

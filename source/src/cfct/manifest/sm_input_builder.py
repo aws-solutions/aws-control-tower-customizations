@@ -104,6 +104,60 @@ class SCPResourceProperties:
         }
 
 
+class RCPResourceProperties:
+    """
+    This class helps create and return input needed to execute RCP state
+    machine. This also defines the required keys to execute the state machine.
+
+    Example:
+
+    resource_properties = RCPResourceProperties(name, description, policy_url,
+                                                policy_list, account_id,
+                                                operation, ou_list,
+                                                delimiter, rcp_parameters)
+    rcp_input = InputBuilder(resource_properties.get_rcp_input_map())
+    sm_input = rcp_input.input_map()
+
+    """
+
+    def __init__(
+        self,
+        policy_name,
+        policy_description,
+        policy_url,
+        ou_list,
+        policy_list=None,
+        account_id="",
+        operation="",
+        ou_name_delimiter=":",
+    ):
+        self._policy_name = policy_name
+        self._policy_description = policy_description
+        self._policy_url = policy_url
+        self._policy_list = [] if policy_list is None else policy_list
+        self._account_id = account_id
+        self._operation = operation
+        self._ou_list = ou_list
+        self._ou_name_delimiter = ou_name_delimiter
+
+    def get_rcp_input_map(self):
+        return {
+            "PolicyDocument": self._get_policy_document(),
+            "AccountId": self._account_id,
+            "PolicyList": self._policy_list,
+            "Operation": self._operation,
+            "OUList": self._ou_list,
+            "OUNameDelimiter": self._ou_name_delimiter,
+        }
+
+    def _get_policy_document(self):
+        return {
+            "Name": self._policy_name,
+            "Description": self._policy_description,
+            "PolicyURL": self._policy_url,
+        }
+
+
 class StackSetResourceProperties:
     """
     This class helps create and return input needed to execute Stack Set

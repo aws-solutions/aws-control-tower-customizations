@@ -4,7 +4,7 @@
 if [ -z "$1" ]; then
     echo "Please provide the base source bucket name, trademark approved solution name and version where the lambda code will eventually reside."
     echo "For example: ./execute_stage_scripts.sh <STAGE_NAME>"
-    echo "For example: ./execute_stage_scripts.sh build | scp | stackset"
+    echo "For example: ./execute_stage_scripts.sh build | scp | rcp | stackset"
     exit 1
 fi
 
@@ -18,6 +18,7 @@ BOOL_VALUES=$7
 NONE_TYPE_VALUES=$8
 BUILD_STAGE_NAME="build"
 SCP_STAGE_NAME="scp"
+RCP_STAGE_NAME="rcp"
 STACKSET_STAGE_NAME="stackset"
 CURRENT=$(pwd)
 MANIFEST_FILE_PATH=$CURRENT/manifest.yaml
@@ -48,6 +49,12 @@ scp_scripts () {
     python state_machine_trigger.py "$LOG_LEVEL" "$WAIT_TIME" "$MANIFEST_FILE_PATH" "$SM_ARN" "$ARTIFACT_BUCKET" "$SCP_STAGE_NAME" "$KMS_KEY_ALIAS_NAME"
 }
 
+rcp_scripts () {
+    echo "Date: $(date) Path: $(pwd)"
+    echo "python state_machine_trigger.py $LOG_LEVEL $WAIT_TIME $MANIFEST_FILE_PATH $SM_ARN $ARTIFACT_BUCKET $RCP_STAGE_NAME $KMS_KEY_ALIAS_NAME"
+    python state_machine_trigger.py "$LOG_LEVEL" "$WAIT_TIME" "$MANIFEST_FILE_PATH" "$SM_ARN" "$ARTIFACT_BUCKET" "$RCP_STAGE_NAME" "$KMS_KEY_ALIAS_NAME"
+}
+
 stackset_scripts () {
     echo "Date: $(date) Path: $(pwd)"
     echo "python state_machine_trigger.py $LOG_LEVEL $WAIT_TIME $MANIFEST_FILE_PATH $SM_ARN $ARTIFACT_BUCKET $STACKSET_STAGE_NAME $KMS_KEY_ALIAS_NAME"
@@ -62,6 +69,10 @@ elif [ "$STAGE_NAME_ARGUMENT" == $SCP_STAGE_NAME ];
 then
     echo "Executing SCP Stage Scripts."
     scp_scripts
+elif [ "$STAGE_NAME_ARGUMENT" == $RCP_STAGE_NAME ];
+then
+    echo "Executing RCP Stage Scripts."
+    rcp_scripts    
 elif [ "$STAGE_NAME_ARGUMENT" == $STACKSET_STAGE_NAME ];
 then
     echo "Executing StackSet Stage Scripts."

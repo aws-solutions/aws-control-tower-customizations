@@ -28,7 +28,7 @@ setuptools.setup(
     python_requires=">=3.11",
     install_requires=[
         "yorm==1.6.2",
-        "pyyaml>=5.4.1",
+        "pyyaml==5.4.1",
         "Jinja2==3.1.4",
         "MarkupSafe==2.0.1",  # https://github.com/pallets/jinja/issues/1585
         "requests==2.32.2",

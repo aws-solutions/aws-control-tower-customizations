@@ -26,6 +26,7 @@ from cfct.aws.services.cloudformation import Stacks, StackSet
 from cfct.aws.services.organizations import Organizations as Org
 from cfct.aws.services.s3 import S3
 from cfct.aws.services.scp import ServiceControlPolicy as SCP
+from cfct.aws.services.rcp import ResourceControlPolicy as RCP
 from cfct.aws.services.ssm import SSM
 from cfct.aws.services.sts import AssumeRole
 from cfct.aws.utils.url_conversion import parse_bucket_key_names
@@ -895,6 +896,223 @@ class ServiceControlPolicy(object):
 
         scp = SCP(self.logger)
         scp.enable_policy_type(root_id)
+        return self.event
+
+
+class ResourceControlPolicy(object):
+    """
+    This class handles requests from Resource Control Policy State Machine.
+    """
+
+    def __init__(self, event, logger):
+        self.event = event
+        self.params = event.get("ResourceProperties")
+        self.logger = logger
+        self.logger.info(self.__class__.__name__ + " Class Event")
+        self.logger.info(event)
+
+    def _load_policy(self, http_policy_path):
+        bucket_name, key_name, region = parse_bucket_key_names(http_policy_path)
+        policy_file = tempfile.mkstemp()[1]
+        s3_endpoint_url = "https://s3.%s.amazonaws.com" % region
+        s3 = S3(self.logger, region=region, endpoint_url=s3_endpoint_url)
+        s3.download_file(bucket_name, key_name, policy_file)
+
+        self.logger.info("Parsing the policy file: {}".format(policy_file))
+
+        with open(policy_file, "r") as content_file:
+            policy_file_content = content_file.read()
+
+        # Check if valid json
+        json.loads(policy_file_content)
+        # Return the Escaped JSON text
+
+        return policy_file_content.replace('"', '"').replace("\n", "\r\n").replace("  ", "")
+
+    def list_policies(self):
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
+        self.logger.info(self.params)
+        # Check if PolicyName attribute exists in event,
+        # if so, it is called for attach or detach policy
+        if "PolicyName" in self.event:
+            policy_name = self.event.get("PolicyName")
+        else:
+            policy_name = self.params.get("PolicyDocument").get("Name")
+
+        # Check if RCP already exist
+        rcp = RCP(self.logger)
+        pages = rcp.list_policies()
+
+        for page in pages:
+            policies_list = page.get("Policies")
+
+            # iterate through the policies list
+            for policy in policies_list:
+                if policy.get("Name") == policy_name:
+                    self.logger.info("Policy Found")
+                    self.event.update({"PolicyId": policy.get("Id")})
+                    self.event.update({"PolicyArn": policy.get("Arn")})
+                    self.event.update({"PolicyExist": "yes"})
+                    return self.event
+                else:
+                    continue
+
+        self.event.update({"PolicyExist": "no"})
+        return self.event
+
+    def create_policy(self):
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
+        self.logger.info(self.params)
+        policy_doc = self.params.get("PolicyDocument")
+
+        rcp = RCP(self.logger)
+        self.logger.info("Creating Resource Control Policy")
+        policy_content = self._load_policy(policy_doc.get("PolicyURL"))
+
+        response = rcp.create_policy(
+            policy_doc.get("Name"), policy_doc.get("Description"), policy_content
+        )
+        self.logger.info("Create RCP Response")
+        self.logger.info(response)
+        policy_id = response.get("Policy").get("PolicySummary").get("Id")
+        self.event.update({"PolicyId": policy_id})
+        return self.event
+
+    def update_policy(self):
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
+        self.logger.info(self.params)
+        policy_doc = self.params.get("PolicyDocument")
+        policy_id = self.event.get("PolicyId")
+        policy_content = self._load_policy(policy_doc.get("PolicyURL"))
+
+        rcp = RCP(self.logger)
+        self.logger.info("Updating Resource Control Policy")
+        response = rcp.update_policy(
+            policy_id,
+            policy_doc.get("Name"),
+            policy_doc.get("Description"),
+            policy_content,
+        )
+        self.logger.info("Update RCP Response")
+        self.logger.info(response)
+        policy_id = response.get("Policy").get("PolicySummary").get("Id")
+        self.event.update({"PolicyId": policy_id})
+        return self.event
+
+    def delete_policy(self):
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
+        self.logger.info(self.params)
+        policy_id = self.event.get("PolicyId")
+
+        rcp = RCP(self.logger)
+        self.logger.info("Deleting Resource Control Policy")
+        rcp.delete_policy(policy_id)
+        self.logger.info("Delete RCP")
+        status = "Policy: {} deleted successfully".format(policy_id)
+        self.event.update({"Status": status})
+        return self.event
+
+    def attach_policy(self):
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
+        self.logger.info(self.params)
+        if self.params.get("AccountId") == "":
+            target_id = self.event.get("OUId")
+        else:
+            target_id = self.params.get("AccountId")
+        policy_id = self.event.get("PolicyId")
+        rcp = RCP(self.logger)
+        rcp.attach_policy(policy_id, target_id)
+        self.logger.info("Attach Policy")
+        status = "Policy: {} attached successfully to Target: {}".format(policy_id, target_id)
+        self.event.update({"Status": status})
+        return self.event
+
+    def detach_policy(self):
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
+        self.logger.info(self.params)
+        if self.params.get("AccountId") == "":
+            target_id = self.event.get("OUId")
+        else:
+            target_id = self.params.get("AccountId")
+        policy_id = self.event.get("PolicyId")
+        rcp = RCP(self.logger)
+        rcp.detach_policy(policy_id, target_id)
+        self.logger.info("Detach Policy Response")
+        status = "Policy: {} detached successfully from Target: {}".format(policy_id, target_id)
+        self.event.update({"Status": status})
+        return self.event
+
+    def list_policies_for_ou(self):
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
+        self.logger.info(self.params)
+        ou_name = self.event.get("OUName")
+        policy_name = self.params.get("PolicyDocument").get("Name")
+        ou_id = self.event.get("OUId")
+        if ou_id is None or len(ou_id) == 0:
+            raise ValueError("OU id is not found for {}".format(ou_name))
+        self.event.update({"OUId": ou_id})
+        self.list_policies_for_target(ou_id, policy_name)
+
+        return self.event
+
+    def list_policies_for_account(self):
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
+        self.logger.info(self.params)
+        self.list_policies_for_target(self.params.get("AccountId"), self.event.get("PolicyName"))
+        return self.event
+
+    def list_policies_for_target(self, target_id, policy_name):
+        # Check if RCP already exist
+        rcp = RCP(self.logger)
+        pages = rcp.list_policies_for_target(target_id)
+
+        for page in pages:
+            policies_list = page.get("Policies")
+
+            # iterate through the policies list
+            for policy in policies_list:
+                if policy.get("Name") == policy_name:
+                    self.logger.info("Policy Found")
+                    self.event.update({"PolicyId": policy.get("Id")})
+                    self.event.update({"PolicyArn": policy.get("Arn")})
+                    self.event.update({"PolicyAttached": "yes"})
+                    return self.event
+                else:
+                    continue
+
+        self.event.update({"PolicyAttached": "no"})
+
+    def detach_policy_from_all_accounts(self):
+        self.logger.info("Executing: " + self.__class__.__name__ + "/" + inspect.stack()[0][3])
+        self.logger.info(self.params)
+        policy_id = self.event.get("PolicyId")
+        rcp = RCP(self.logger)
+
+        pages = rcp.list_targets_for_policy(policy_id)
+        accounts = []
+
+        for page in pages:
+            target_list = page.get("Targets")
+
+            # iterate through the policies list
+            for target in target_list:
+                account_id = target.get("TargetId")
+                rcp.detach_policy(policy_id, account_id)
+                accounts.append(account_id)
+
+        status = "Policy: {} detached successfully from Accounts: {}".format(policy_id, accounts)
+        self.event.update({"Status": status})
+        return self.event
+
+    def enable_policy_type(self):
+        org = Org(self.logger)
+        response = org.list_roots()
+        self.logger.info("List roots Response")
+        self.logger.info(response)
+        root_id = response["Roots"][0].get("Id")
+
+        rcp = RCP(self.logger)
+        rcp.enable_policy_type(root_id)
         return self.event
 
 

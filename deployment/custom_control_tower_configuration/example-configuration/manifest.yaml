@@ -46,3 +46,12 @@ resources:
     deployment_targets: # accounts property is not supported for SCPs
       organizational_units:
         - <OU_NAME>
+
+  - name: test-rcp-preventive-guardrails
+    description: To prevent from deleting or disabling resources in member accounts
+    resource_file: policies/rcp-preventive-guardrails.json
+    deploy_method: rcp
+    #Apply to the following OU(s)
+    deployment_targets: # accounts property is not supported for RCPs
+      organizational_units:
+        - <OU_NAME>

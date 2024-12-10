@@ -24,14 +24,15 @@ from cfct.utils.logger import Logger
 
 def main():
     """
-    This function is triggered by CodePipeline stages (ServiceControlPolicy
-     and CloudFormationResource). Each stage triggers the following workflow:
+    This function is triggered by CodePipeline stages (ServiceControlPolicy,
+     ResourceControlPolicy and CloudFormationResource).
+     Each stage triggers the following workflow:
      1. Parse the manifest file.
      2. Generate state machine input.
      3. Start state machine execution.
      4. Monitor state machine execution.
 
-     SCP State Machine currently supports parallel deployments only
+     SCP & RCP State Machine currently supports parallel deployments only
      Stack Set State Machine currently support sequential deployments only.
 
     :return: None
@@ -68,7 +69,12 @@ def main():
                 sm_input_list = get_scp_inputs()
                 logger.info("SCP sm_input_list:")
                 logger.info(sm_input_list)
-
+            elif stage_name.upper() == "RCP":
+                # get RCP state machine input list
+                os.environ["EXECUTION_MODE"] = "parallel"
+                sm_input_list = get_rcp_inputs()
+                logger.info("RCP sm_input_list:")
+                logger.info(sm_input_list)
             elif stage_name.upper() == "STACKSET":
                 os.environ["EXECUTION_MODE"] = "sequential"
                 sm_input_list = get_stack_set_inputs()
@@ -97,6 +103,10 @@ def main():
 
 def get_scp_inputs() -> list:
     return parse.scp_manifest()
+
+
+def get_rcp_inputs() -> list:
+    return parse.rcp_manifest()
 
 
 def get_stack_set_inputs() -> list:
