@@ -1,6 +1,7 @@
 # Development
 .DS_Store
 .idea
+*.iml
 .vscode
 *.pyc
 *.so

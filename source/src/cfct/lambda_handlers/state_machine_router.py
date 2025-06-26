@@ -18,7 +18,12 @@
 import inspect
 import os
 
-from cfct.state_machine_handler import CloudFormation, ServiceControlPolicy, StackSetSMRequests, ResourceControlPolicy
+from cfct.state_machine_handler import (
+    CloudFormation,
+    ResourceControlPolicy,
+    ServiceControlPolicy,
+    StackSetSMRequests,
+)
 from cfct.utils.logger import Logger
 
 # initialise logger

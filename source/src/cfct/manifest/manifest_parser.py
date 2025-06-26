@@ -25,8 +25,8 @@ from cfct.manifest.cfn_params_handler import CFNParamsHandler
 from cfct.manifest.manifest import Manifest
 from cfct.manifest.sm_input_builder import (
     InputBuilder,
-    SCPResourceProperties,
     RCPResourceProperties,
+    SCPResourceProperties,
     StackSetResourceProperties,
 )
 from cfct.manifest.stage_to_s3 import StageFile

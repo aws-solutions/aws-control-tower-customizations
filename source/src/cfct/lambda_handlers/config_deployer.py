@@ -39,7 +39,8 @@ init_failed = False
 kms = KMS(logger)
 ssm = SSM(logger)
 
-def safe_extract(zip_file_name, output_path, max_files = 1000, max_size = 500 * 1024 * 1024):
+
+def safe_extract(zip_file_name, output_path, max_files=1000, max_size=500 * 1024 * 1024):
     with zipfile.ZipFile(zip_file_name, "r") as zip_file:
         # Get the list of files
         file_list = zip_file.infolist()
@@ -55,6 +56,7 @@ def safe_extract(zip_file_name, output_path, max_files = 1000, max_size = 500 * 
 
         for file in file_list:
             zip_file.extract(file, output_path)
+
 
 def unzip_function(zip_file_name, function_path, output_path):
     orig_path = os.getcwd()

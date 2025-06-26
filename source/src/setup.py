@@ -29,13 +29,13 @@ setuptools.setup(
     install_requires=[
         "yorm==1.6.2",
         "pyyaml==5.4.1",
-        "Jinja2==3.1.4",
+        "Jinja2==3.1.6",
         "MarkupSafe==2.0.1",  # https://github.com/pallets/jinja/issues/1585
-        "requests==2.32.2",
+        "requests==2.32.4",
         "markdown_to_json==1.0.0",
         "python-dateutil==2.8.1",
-        "boto3==1.28.17",
-        "botocore==1.31.17",
+        "boto3==1.34.162",
+        "botocore==1.34.162",
     ],
     extras_require={
         "test": [
@@ -48,6 +48,7 @@ setuptools.setup(
             "pytest == 6.2.4",
             "expecter==0.3.0",
             "pykwalify == 1.8.0",
+            "cfn-flip>=1.3.0",
         ],
         "dev": [
             "ipython",

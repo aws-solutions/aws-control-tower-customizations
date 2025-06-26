@@ -24,9 +24,9 @@ from botocore.exceptions import ClientError
 
 from cfct.aws.services.cloudformation import Stacks, StackSet
 from cfct.aws.services.organizations import Organizations as Org
+from cfct.aws.services.rcp import ResourceControlPolicy as RCP
 from cfct.aws.services.s3 import S3
 from cfct.aws.services.scp import ServiceControlPolicy as SCP
-from cfct.aws.services.rcp import ResourceControlPolicy as RCP
 from cfct.aws.services.ssm import SSM
 from cfct.aws.services.sts import AssumeRole
 from cfct.aws.utils.url_conversion import parse_bucket_key_names

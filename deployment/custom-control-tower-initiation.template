@@ -1090,6 +1090,9 @@ Resources:
                   - kms:DescribeKey
                 Resource:
                   - !Sub arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*
+                Condition:
+                  ForAnyValue:StringEquals:
+                    kms:ResourceAliases: !Sub ["alias/${KMSKeyName}", {KMSKeyName: !FindInMap [KMS, Alias, Name]}]
         - PolicyName: "Custom-Control-Tower-StackSet-CodeBuild-Policy-STS"
           PolicyDocument:
             Version: "2012-10-17"
@@ -1220,6 +1223,9 @@ Resources:
                   - kms:EnableKeyRotation
                 Resource:
                   - !Sub arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*
+                Condition:
+                  ForAnyValue:StringEquals:
+                    kms:ResourceAliases: !Sub ["alias/${KMSKeyName}", {KMSKeyName: !FindInMap [KMS, Alias, Name]}]
               - Effect: "Allow"
                 Action:
                   - kms:CreateKey
@@ -1229,7 +1235,9 @@ Resources:
                 Action:
                   - kms:CreateAlias
                 Resource:
-                  - !Sub arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:alias/*
+                  - !Sub
+                    - arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:alias/${KMSKeyName}
+                    - KMSKeyName: !FindInMap [KMS, Alias, Name]
                   - !Sub arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*
         - PolicyName: Custom-Control-Tower-DeploymentLambda-S3
           PolicyDocument:
@@ -1499,6 +1507,9 @@ Resources:
                   - kms:DescribeKey
                 Resource:
                   - !Sub arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*
+                Condition:
+                  ForAnyValue:StringEquals:
+                    kms:ResourceAliases: !Sub ["alias/${KMSKeyName}", {KMSKeyName: !FindInMap [KMS, Alias, Name]}]
         - PolicyName: State-Machine-Lambda-Policy-S3
           PolicyDocument:
             Version: '2012-10-17'
