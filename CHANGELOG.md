@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.3] - 2025-07-03
+- Bug fixes to 2.8.2 release
+
+## [2.8.2] - 2025-06-26
+- Update policies for CfCT roles to limit access to the CfCT KMS key only.
+- Update dependencies
+  - `Jinja2` 3.1.6
+  - `requests` 2.32.4
+  - `boto3`/`botocore` 1.34.162
+
 ## [2.8.1] - 2024-12-09
 - Add support for Resource Control Policies (RCPs). RCPs help you ensure that resources in your accounts stay within 
   your organization’s access control guidelines. Learn more [here](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_rcps.html).
