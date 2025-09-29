@@ -478,6 +478,9 @@ Resources:
                   - s3:PutObject
                   - s3:GetObject
                   - s3:GetObjectVersion
+                  - s3:GetObjectVersionTagging
+                  - s3:ListBucket
+                  - s3:PutObjectTagging
                 Resource:
                   - !Sub arn:${AWS::Partition}:s3:::${CustomControlTowerPipelineArtifactS3Bucket}/*
                   - !Sub arn:${AWS::Partition}:s3:::${CustomControlTowerPipelineS3Bucket}/*
