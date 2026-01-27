@@ -34,8 +34,9 @@ setuptools.setup(
         "requests==2.32.4",
         "markdown_to_json==1.0.0",
         "python-dateutil==2.8.1",
-        "boto3==1.34.162",
-        "botocore==1.34.162",
+        "boto3==1.42.35",
+        "botocore==1.42.35",
+        "urllib3>=2.2.3,<3",  # CVE-2025-66418 fix
     ],
     extras_require={
         "test": [
