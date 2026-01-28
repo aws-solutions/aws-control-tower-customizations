@@ -36,7 +36,7 @@ setuptools.setup(
         "python-dateutil==2.8.1",
         "boto3==1.42.35",
         "botocore==1.42.35",
-        "urllib3>=2.2.3,<3",  # CVE-2025-66418 fix
+        "urllib3>=2.2.3,<3",  # CVE-2025-66418, CVE-2025-66471, CVE-2026-21441 fix
     ],
     extras_require={
         "test": [
