@@ -31,11 +31,12 @@ setuptools.setup(
         "pyyaml==5.4.1",
         "Jinja2==3.1.6",
         "MarkupSafe==2.0.1",  # https://github.com/pallets/jinja/issues/1585
-        "requests==2.32.4",
+        "requests==2.33.0",
         "markdown_to_json==1.0.0",
         "python-dateutil==2.8.1",
         "boto3==1.34.162",
         "botocore==1.34.162",
+        "urllib3>=2.6.3,<3",
     ],
     extras_require={
         "test": [
