@@ -36,7 +36,7 @@ setuptools.setup(
         "python-dateutil==2.8.1",
         "boto3==1.34.162",
         "botocore==1.34.162",
-        "urllib3>=2.6.3,<3",
+        "urllib3>=2.7.0,<3",
     ],
     extras_require={
         "test": [
