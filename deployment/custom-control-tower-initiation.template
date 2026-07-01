@@ -526,6 +526,10 @@ Resources:
                     - 'codestar-connections:GetConnection'
                     - 'codestar-connections:ListConnections'
                     - 'codestar-connections:ListTagsForResource'
+                    - 'codeconnections:UseConnection'
+                    - 'codeconnections:GetConnection'
+                    - 'codeconnections:ListConnections'
+                    - 'codeconnections:ListTagsForResource'
                   Resource: !Ref CodeConnection
                 - !Ref AWS::NoValue
 
